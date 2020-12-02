@@ -46,16 +46,14 @@ def day1():
     task1 = functools.reduce(operator.mul, pair_sums[2020], 1)
     task2 = functools.reduce(operator.mul, find_2020_sum3(expenses, pair_sums), 1)
 
-    run_time = time.time() - start_time
-    return run_time, task1, task2
+    return time.time() - start_time, task1, task2
 
 # Day 2
 
 # "1-5 a: yawtrdiop" -> [1, 5, "a", "yawtrdiop"]
 def parse(pwd):
     items = pwd.split()
-    itemised = [int(x) for x in items[0].split("-")] + [items[1][0], items[2]]
-    return itemised
+    return [int(x) for x in items[0].split("-")] + [items[1][0], items[2]]
 
 # valid pwd acc. to sled rental policy
 def is_valid_sled_rental(pwd):
@@ -85,18 +83,14 @@ def day2():
     pwds = [parse(pwd) for pwd in read_lines('day2input.txt')]
 
     start_time = time.time()
-    task1 = [is_valid_sled_rental(pwd) for pwd in pwds].count(True)
-    task2 = [is_valid_toboggan(pwd) for pwd in pwds].count(True)
-    run_time = time.time() - start_time
+    task1 = sum([is_valid_sled_rental(pwd) for pwd in pwds])
+    task2 = sum([is_valid_toboggan(pwd) for pwd in pwds])
 
-    return run_time, task1, task2
+    return time.time() - start_time, task1, task2
 
 def run(day):
     run_time, task1, task2 = day()
-
-    print(day.__name__ + " --- %s seconds ---" % run_time)
-    print(task1)
-    print(task2)
+    print(day.__name__ + ": %.6s s - " % run_time + str(task1) + " " + str(task2))
 
 if __name__ == '__main__':
     run(day1)
