@@ -88,6 +88,92 @@ def day2():
 
     return time.time() - start_time, task1, task2
 
+# Day 3
+#given a start index, is the position at 3 along a tree ('#'), using wrapped lines?
+def is_tree(row, index):
+    return row[index] == '#'
+
+def trajectory(slope, step):
+    trees = []
+    row_len = len(slope[0])
+    index = 0
+    for row in slope[1:]:
+        index = (index + step) % row_len
+        trees.append(is_tree(row, index))
+    return trees
+
+
+class Day3Test(unittest.TestCase):
+    tree_map = ['..##.......',
+                '#...#...#..',
+                '.#....#..#.',
+                '..#.#...#.#',
+                '.#...##..#.',
+                '..#.##.....',
+                '.#.#.#....#',
+                '.#........#',
+                '#.##...#...',
+                '#...##....#',
+                '.#..#...#.#']
+    slope = [
+    '....#...#####..##.#..##..#....#',  #0
+    '..##.#.#.........#.#......##...',
+    '#.#.#.##.##...#.......#...#..#.',
+    '..##.............#.#.##.....#..',
+    '##......#.............#....#...',
+    '.....##..#.....##.#.......##..#',
+    '.##.....#........##...##.#....#',
+    '.##......#.#......#.....#..##.#',
+    '##....#..#...#...#...##.#...##.',
+    '##........##.#...##......#.#.#.',
+    '..#.#........#...##.....#.....#',  #10
+    '..#.......####.#....#..#####...',
+    '.##..#..#..##.#.....###.#..#...',
+    '......###..##.....#.#.#..###.#.',  #13
+    '..#.#...#..##.....#....#.#.....',
+    '.....# .#...#.###.#..#..........',
+    '##.....#...#.#....#..#.#.......',
+    '..#...#...#.........##......#..',
+    '......#.#...#...#..#...##.#...#',
+    '....#.................##.##....',
+    '...#......#.............#....##',
+    '##..#..#..........#...##.#.#...',
+    '....#...##....#..#.#...........',
+    '##.#.#.#...#....#........#..#.#',
+    '...###..........#...#...#..##.#',
+    '..##.......###.#......##.##....',
+    '...........#.#....#.....#.#...#',
+    '..#......##.#...##.#.#......#.#']
+
+    def test_is_tree(self):
+        self.assertTrue(is_tree(self.tree_map[0], 3))
+        self.assertTrue(is_tree(self.tree_map[1], 0))
+        self.assertFalse(is_tree(self.tree_map[1], 3))
+
+    def test_trajectory(self):
+        # task 1
+        self.assertEqual(7, sum(trajectory(self.tree_map, 3)))
+        self.assertEqual(31, len(self.slope[0]))
+        self.assertEqual(8, sum(trajectory(self.slope[0:12], 3)))
+        self.assertEqual(10, sum(trajectory(self.slope[0:14], 3)))
+        # task 2
+        self.assertEqual(2, sum(trajectory(self.tree_map, 1)))
+        self.assertEqual(3, sum(trajectory(self.tree_map, 5)))
+        self.assertEqual(4, sum(trajectory(self.tree_map, 7)))
+        self.assertEqual(2, sum(trajectory(self.tree_map[::2], 1)))
+
+
+
+def day3():
+    slope = [line for line in read_lines('day3input.txt')]
+    slope = [row[:-1] for row in slope]
+
+    start_time = time.time()
+    task1 = sum(trajectory(slope, 3))
+    task2 = task1 * sum(trajectory(slope, 1)) * sum(trajectory(slope, 5)) * sum(trajectory(slope, 7)) * sum(trajectory(slope[::2], 1))
+
+    return time.time() - start_time, task1, task2
+
 def run(day):
     run_time, task1, task2 = day()
     print(day.__name__ + ": %.6s s - " % run_time + str(task1) + " " + str(task2))
@@ -95,5 +181,6 @@ def run(day):
 if __name__ == '__main__':
     run(day1)
     run(day2)
+    run(day3)
     unittest.main()
 
