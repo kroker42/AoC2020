@@ -158,6 +158,10 @@ def is_valid_height(str):
 def is_valid_hair(str):
     return re.search(r"#[0-9a-f]{6}", str) != None
 
+# bizarrely slower than the string comparison below
+def is_valid_pid(str):
+    return len(str) == 9 and re.match(r"^\d{9}$", str) != None
+
 # for a valid passport - are the fields also valid?
 # pre-condition; is_valid_passport(pp)
 def has_valid_fields(pp):
@@ -197,6 +201,9 @@ class Day4Test(unittest.TestCase):
         self.assertFalse(is_valid_hair("#z2de4f"))
         self.assertFalse(is_valid_hair("#e4f"))
 
+    def test_is_valid_pid(self):
+        self.assertTrue(is_valid_pid("012345678"))
+
     invalid_pps = ["eyr:1972 cid:100 hcl:#18171d ecl:amb hgt:170 pid:186cm iyr:2018 byr:1926",
                    "iyr:2019 hcl:#602927 eyr:1967 hgt:170cm ecl:grn pid:012533040 byr:1946",
                    "hcl:dab227 iyr:2012 ecl:brn hgt:182cm pid:021572410 eyr:2020 byr:1992 cid:277",
@@ -222,6 +229,42 @@ def day4():
 
     return time.time() - start_time, task1, task2
 
+# Day 5: Binary boarding cards
+def binary(bin_str):
+    valid_chars = ['B', 'R']
+    return int(''.join([str(int(ch in valid_chars)) for ch in bin_str]), 2)
+
+def get_seat(boarding_card):
+    row = binary(boarding_card[:7])
+    col = binary(boarding_card[7:10])
+    return 8 * row + col
+
+class Day5Test(unittest.TestCase):
+    def test_binary(self):
+        self.assertEqual(44, binary("FBFBBFF"))
+        self.assertEqual(70, binary("BFFFBBF"))
+        self.assertEqual(5, binary("RLR"))
+
+    def test_seat_no(self):
+        self.assertEqual(357, get_seat("FBFBBFFRLR"))
+        self.assertEqual(567, get_seat("BFFFBBFRRR"))
+        self.assertEqual(119, get_seat("FFFBBBFRRR"))
+        self.assertEqual(820, get_seat("BBFFBBFRLL"))
+
+def day5():
+    boarding_cards = read_lines('day5input.txt')
+
+    start_time = time.time()
+
+    seats = [get_seat(card) for card in boarding_cards]
+    task1 = max(seats)
+
+    seats.sort()
+    task2 = set(range(seats[0], seats[-1] + 1)).difference(seats)
+
+    return time.time() - start_time, task1, task2
+
+
 def run(day):
     run_time, task1, task2 = day()
     print(day.__name__ + ": %.6s s - " % run_time + str(task1) + " " + str(task2))
@@ -231,5 +274,6 @@ if __name__ == '__main__':
     run(day2)
     run(day3)
     run(day4)
+    run(day5)
     unittest.main()
 
