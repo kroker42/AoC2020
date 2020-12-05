@@ -20,7 +20,7 @@ def read_lines(fname):
 def read_records(fname):
     return [record for record in open(fname).read().split('\n\n')]
 
-# Day 1
+# Day 1 - Submit expenses
 
 # get map of pair sum -> pair for all permutation pairs in a list
 def get_pair_sums(array):
@@ -54,7 +54,7 @@ def day1():
 
     return time.time() - start_time, task1, task2
 
-# Day 2
+# Day 2 - Validate Toboggan Corporate password policies
 
 # "1-5 a: yawtrdiop" -> [1, 5, "a", "yawtrdiop"]
 def parse(pwd):
@@ -94,7 +94,7 @@ def day2():
 
     return time.time() - start_time, task1, task2
 
-# Day 3
+# Day 3 - Toboggan down the slope
 
 def trajectory(slope, step):
     row_len = len(slope[0])
@@ -137,7 +137,7 @@ def day3():
 
     return time.time() - start_time, task1, task2
 
-# Day 4
+# Day 4 - Hack the passport scanner
 def parse_dict(str):
     return {k: v for k, v in [kv.split(':') for kv in str.split()]}
 
@@ -264,16 +264,28 @@ def day5():
 
     return time.time() - start_time, task1, task2
 
+# Day 6 -
+
+class Day6Test(unittest.TestCase):
+    def test_(self):
+        self.assertEqual(False, False)
+
+def day6():
+    #data = read_lines('day6input.txt')
+
+    start_time = time.time()
+
+    task1 = None
+    task2 = None
+
+    return time.time() - start_time, task1, task2
 
 def run(day):
     run_time, task1, task2 = day()
     print(day.__name__ + ": %.6s s - " % run_time + str(task1) + " " + str(task2))
 
 if __name__ == '__main__':
-    run(day1)
-    run(day2)
-    run(day3)
-    run(day4)
-    run(day5)
+    for i in range(1, 7):
+        run(eval("day" + str(i)))
     unittest.main()
 
