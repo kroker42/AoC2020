@@ -266,20 +266,15 @@ def day5():
 
 # Day 6 - Customs forms
 def day6():
-    groups = read_records('day6input.txt')
+    groups = [g.split() for g in read_records('day6input.txt')]
 
     start_time = time.time()
 
     # remove line separators inside groups, then count unique items
-    task1 = sum([len(set(''.join(group.split()))) for group in groups])
+    task1 = sum([len(set(''.join(g))) for g in groups])
 
-    # count the chars that are the same in each line in a group
-    split_groups = [g.split() for g in groups]
-    common = []
-    for g in split_groups:
-        common.append(len(set(g[0]).intersection(*[set(x) for x in g[1:]])))
-
-    task2 = sum(common)
+    # count the chars that are the same in every line in a group
+    task2 = sum([len(set(g[0]).intersection(*[set(x) for x in g[1:]])) for g in groups])
 
     return time.time() - start_time, task1, task2
 
