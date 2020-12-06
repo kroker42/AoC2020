@@ -264,19 +264,22 @@ def day5():
 
     return time.time() - start_time, task1, task2
 
-# Day 6 -
-
-class Day6Test(unittest.TestCase):
-    def test_(self):
-        self.assertEqual(False, False)
-
+# Day 6 - Customs forms
 def day6():
-    #data = read_lines('day6input.txt')
+    groups = read_records('day6input.txt')
 
     start_time = time.time()
 
-    task1 = None
-    task2 = None
+    # remove line separators inside groups, then count unique items
+    task1 = sum([len(set(''.join(group.split()))) for group in groups])
+
+    # count the chars that are the same in each line in a group
+    split_groups = [g.split() for g in groups]
+    common = []
+    for g in split_groups:
+        common.append(len(set(g[0]).intersection(*[set(x) for x in g[1:]])))
+
+    task2 = sum(common)
 
     return time.time() - start_time, task1, task2
 
