@@ -307,14 +307,14 @@ def build_reverse_tree(rules):
     return tree
 
 def reverse(tree):
-    reverese_tree = {}
+    reverse_tree = {}
     for bag in tree.keys():
         if bag not in reverse_tree:
             reverse_tree[bag] = {}
-        for b, n in tree[bag]:
+        for b in tree[bag]:
             if b not in reverse_tree:
                 reverse_tree[b] = {}
-            reverse_tree[b][bag] = n
+            reverse_tree[b][bag] = tree[bag][b]
     return reverse_tree
 
 def build_map(rules):
@@ -360,11 +360,11 @@ class Day7Test(unittest.TestCase):
 
     def test_build_reverse_tree(self):
         parsed = [parse_bags(r) for r in self.rules]
-        tree = build_reverse_tree(parsed[-3:])
+        reverse_tree = build_reverse_tree(parsed[-3:])
         exp_tree = {"faded blue": {"vibrant plum": 5},
                     "dotted black": {"vibrant plum": 6},
                     "vibrant plum": {}}
-        self.assertEqual(exp_tree, tree)
+        self.assertEqual(exp_tree, reverse_tree)
 
     def test_find_containers(self):
         self.assertEqual(4, len(find_containers(build_reverse_tree([parse_bags(r) for r in self.rules]), "shiny gold")))
@@ -383,13 +383,28 @@ class Day7Test(unittest.TestCase):
         self.assertEqual(32, find_content(build_tree([parse_bags(r) for r in self.rules]), "shiny gold"))
         self.assertEqual(126, find_content(build_tree([parse_bags(r) for r in self.rules2]), "shiny gold"))
 
+    def test_build_map(self):
+        parsed = [parse_bags(r) for r in self.rules2]
+        tree, rev_tree = build_map(parsed)
+        exp_tree = {
+            "shiny gold" : {},
+            "dark red": {"shiny gold": 2},
+            "dark orange": {"dark red": 2},
+            "dark yellow": {"dark orange": 2},
+            "dark green": {"dark yellow": 2},
+            "dark blue": {"dark green": 2},
+            "dark violet": {"dark blue": 2},
+        }
+        self.assertEqual(exp_tree, rev_tree)
+
 def day7():
     rules = read_lines("day7input.txt")
 
     start_time = time.time()
     parsed_rules = [parse_bags(r) for r in rules]
-    task1 = len(find_containers(build_reverse_tree(parsed_rules), "shiny gold"))
-    task2 = find_content(build_tree(parsed_rules), "shiny gold")
+    tree, rev_tree = build_map(parsed_rules)
+    task1 = len(find_containers(rev_tree, "shiny gold"))
+    task2 = find_content(tree, "shiny gold")
 
     return time.time() - start_time, task1, task2
 
