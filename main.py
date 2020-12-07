@@ -278,12 +278,128 @@ def day6():
 
     return time.time() - start_time, task1, task2
 
+# Luggage sorting
+def parse_bags(str):
+    bags = re.findall(r"(\w+\s\w+)\sbag", str)
+    quantities = [int(i) for i in re.findall(r"\d+", str)]
+
+    return bags, quantities
+
+def build_tree(rules):
+    tree = {}
+    for r in rules:
+        bags, quantities = r
+        tree[bags[0]] = {}
+        if quantities:
+            tree[bags[0]] = dict(zip(bags[1:], quantities))
+    return tree
+
+def build_reverse_tree(rules):
+    tree = {}
+    for r in rules:
+        bags, quantities = r
+        if bags[0] not in tree:
+            tree[bags[0]] = {}
+        for i in range(0, len(quantities)):
+            if bags[i + 1] not in tree:
+                tree[bags[i + 1]] = {}
+            tree[bags[i + 1]][bags[0]] = quantities[i]
+    return tree
+
+def reverse(tree):
+    reverese_tree = {}
+    for bag in tree.keys():
+        if bag not in reverse_tree:
+            reverse_tree[bag] = {}
+        for b, n in tree[bag]:
+            if b not in reverse_tree:
+                reverse_tree[b] = {}
+            reverse_tree[b][bag] = n
+    return reverse_tree
+
+def build_map(rules):
+    tree = build_tree(rules)
+    return tree, reverse(tree)
+
+def find_containers(reverse_tree, bag):
+    containers = set(reverse_tree[bag].keys())
+    for b in containers:
+        containers = containers.union(find_containers(reverse_tree, b))
+    return containers
+
+def find_content(tree, bag):
+    count = 0
+    for b in tree[bag].keys():
+        count += tree[bag][b] * (1 + find_content(tree, b))
+    return count
+
+class Day7Test(unittest.TestCase):
+    rules = [
+        "light red bags contain 1 bright white bag, 2 muted yellow bags.",
+        "dark orange bags contain 3 bright white bags, 4 muted yellow bags.",
+        "bright white bags contain 1 shiny gold bag.",
+        "muted yellow bags contain 2 shiny gold bags, 9 faded blue bags.",
+        "shiny gold bags contain 1 dark olive bag, 2 vibrant plum bags.",
+        "dark olive bags contain 3 faded blue bags, 4 dotted black bags.",
+        "vibrant plum bags contain 5 faded blue bags, 6 dotted black bags.",
+        "faded blue bags contain no other bags.",
+        "dotted black bags contain no other bags."]
+
+    def test_parse_bags(self):
+        self.assertEqual(["light red", "bright white", "muted yellow"], parse_bags(self.rules[0])[0])
+        self.assertEqual([1, 2], parse_bags(self.rules[0])[1])
+        self.assertEqual(["dotted black", "no other"], parse_bags(self.rules[-1])[0])
+        self.assertEqual([], parse_bags(self.rules[-1])[1])
+
+    def test_build_tree(self):
+        parsed = [parse_bags(r) for r in self.rules]
+        tree = build_tree(parsed[-3:])
+        exp_tree = {"faded blue": {}, "dotted black": {},
+                    "vibrant plum": {"faded blue": 5, "dotted black": 6}}
+        self.assertEqual(exp_tree, tree)
+
+    def test_build_reverse_tree(self):
+        parsed = [parse_bags(r) for r in self.rules]
+        tree = build_reverse_tree(parsed[-3:])
+        exp_tree = {"faded blue": {"vibrant plum": 5},
+                    "dotted black": {"vibrant plum": 6},
+                    "vibrant plum": {}}
+        self.assertEqual(exp_tree, tree)
+
+    def test_find_containers(self):
+        self.assertEqual(4, len(find_containers(build_reverse_tree([parse_bags(r) for r in self.rules]), "shiny gold")))
+
+    rules2 = [
+    "shiny gold bags contain 2 dark red bags.",
+    "dark red bags contain 2 dark orange bags.",
+    "dark orange bags contain 2 dark yellow bags.",
+    "dark yellow bags contain 2 dark green bags.",
+    "dark green bags contain 2 dark blue bags.",
+    "dark blue bags contain 2 dark violet bags.",
+    "dark violet bags contain no other bags."
+    ]
+
+    def test_find_content(self):
+        self.assertEqual(32, find_content(build_tree([parse_bags(r) for r in self.rules]), "shiny gold"))
+        self.assertEqual(126, find_content(build_tree([parse_bags(r) for r in self.rules2]), "shiny gold"))
+
+def day7():
+    rules = read_lines("day7input.txt")
+
+    start_time = time.time()
+    parsed_rules = [parse_bags(r) for r in rules]
+    task1 = len(find_containers(build_reverse_tree(parsed_rules), "shiny gold"))
+    task2 = find_content(build_tree(parsed_rules), "shiny gold")
+
+    return time.time() - start_time, task1, task2
+
+# Main
 def run(day):
     run_time, task1, task2 = day()
     print(day.__name__ + ": %.6s s - " % run_time + str(task1) + " " + str(task2))
 
 if __name__ == '__main__':
-    for i in range(1, 7):
+    for i in range(1, 8):
         run(eval("day" + str(i)))
     unittest.main()
 
