@@ -408,13 +408,85 @@ def day7():
 
     return time.time() - start_time, task1, task2
 
+# Infinite games loop
+
+def split_instructions(code):
+    return [(i, int(j)) for i, j in [l.split() for l in code]]
+
+def execute(code, i, acc):
+    if code[0] == "acc":
+        i += 1
+        acc += code[1]
+    elif code[0] == "jmp":
+        i += code[1]
+    elif code[0] == "nop":
+        i += 1
+
+    return i, acc
+
+def run_code(code, repair = None):
+    visited = dict(zip(range(0, len(code)), [0] * len(code)))
+
+    i = 0
+    acc = 0
+
+    while i < len(code) and not visited[i]:
+        visited[i] = 1
+        next_instr = repair[1] if repair and i == repair[0] else code[i]
+        i, acc = execute(next_instr, i, acc)
+
+    return i, acc
+
+def repair(code):
+    instr = None
+
+    for i in range(0, len(code)):
+        if code[i][0] == "jmp":
+            instr = (i, ["nop", code[i][1]])
+        elif code[i][0] == "nop":
+            instr = (i, ["jmp", code[i][1]])
+
+        next_i, acc = run_code(code, instr)
+        if next_i == len(code):
+            return acc
+
+    return None
+
+class Day7Test(unittest.TestCase):
+    code = ["nop +0",
+            "acc +1",
+            "jmp +4",
+            "acc +3",
+            "jmp -3",
+            "acc -99",
+            "acc +1",
+            "jmp -4",
+            "acc +6"]
+    instr = split_instructions(code)
+
+    def test_run_code(self):
+        self.assertEqual(5, run_code(self.instr)[1])
+
+    def test_repair(self):
+        self.assertEqual(8, repair(self.instr))
+
+def day8():
+    code = read_lines("day8input.txt")
+
+    start_time = time.time()
+    instr = split_instructions(code)
+    task1 = run_code(instr)[1]
+    task2 = repair(instr)
+
+    return time.time() - start_time, task1, task2
+
 # Main
 def run(day):
     run_time, task1, task2 = day()
     print(day.__name__ + ": %.6s s - " % run_time + str(task1) + " " + str(task2))
 
 if __name__ == '__main__':
-    for i in range(1, 8):
+    for i in range(1, 9):
         run(eval("day" + str(i)))
     unittest.main()
 
