@@ -493,6 +493,37 @@ def check(code, preamble):
         else:
             sums = sums[preamble-1:] + [sum((x, num)) for x in code[i - (preamble - 1): i]]
 
+def encryption_weakness(code, num):
+    for i in range(0, len(code) - 1):
+        sum = code[i]
+        for j in range(i + 1, len(code)):
+            sum += code[j]
+            if sum == num:
+                return i, j+1
+            elif sum > num:
+                break
+
+
+def sum_up(code, num, j, sum):
+    while sum < num and j < len(code):
+        sum += code[j]
+        j += 1
+    return sum, j
+
+
+def encryption_weakness2(code, num):
+    i = 0
+    j = 1
+    sum = code[i]
+
+    for i in range(0, len(code) - 1):
+        sum, j = sum_up(code, num, j, sum)
+
+        if sum == num:
+            return i, j
+        else:
+            sum -= code[i]
+
 class Day9Test(unittest.TestCase):
     code = [35,
             20,
@@ -518,24 +549,15 @@ class Day9Test(unittest.TestCase):
         self.assertEqual(127, check(self.code, 5))
 
 
-def encryption_weakness(code, num):
-    for i in range(0, len(code) - 1):
-        sum = code[i]
-        for j in range(i + 1, len(code)):
-            sum += code[j]
-            if sum == num:
-                return i, j+1
-            elif sum > num:
-                break
-
-
+# encryption_weakness:  0.0137 s - 88311122 13549369
+# encryption_weakness2: 0.0045 s - 88311122 13549369
 def day9():
     code = read_ints("day9input.txt")
 
     start_time = time.time()
 
     task1 = check(code, 25)
-    start, end = encryption_weakness(code, task1)
+    start, end = encryption_weakness2(code, task1)
     task2 = max(code[start: end]) + min(code[start: end])
 
     return time.time() - start_time, task1, task2
