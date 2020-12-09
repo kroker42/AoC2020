@@ -1,6 +1,7 @@
 # coding=utf-8
 
 from itertools import combinations
+from itertools import permutations
 import operator
 import functools
 import re
@@ -452,7 +453,7 @@ def repair(code):
 
     return None
 
-class Day7Test(unittest.TestCase):
+class Day8Test(unittest.TestCase):
     code = ["nop +0",
             "acc +1",
             "jmp +4",
@@ -480,13 +481,72 @@ def day8():
 
     return time.time() - start_time, task1, task2
 
+# Hacking the plane
+
+def check(code, preamble):
+    sums = [sum(x) for x in permutations(code[:preamble], 2)]
+
+    for i in range(preamble, len(code)):
+        num = code[i]
+        if num not in sums:
+            return num
+        else:
+            sums = sums[preamble-1:] + [sum((x, num)) for x in code[i - (preamble - 1): i]]
+
+class Day9Test(unittest.TestCase):
+    code = [35,
+            20,
+            15,
+            25,
+            47,
+            40,
+            62,
+            55,
+            65,
+            95,
+            102,
+            117,
+            150,
+            182,
+            127,
+            219,
+            299,
+            277,
+            309,
+            576]
+    def test_get_sums(self):
+        self.assertEqual(127, check(self.code, 5))
+
+
+def encryption_weakness(code, num):
+    for i in range(0, len(code) - 1):
+        sum = code[i]
+        for j in range(i + 1, len(code)):
+            sum += code[j]
+            if sum == num:
+                return i, j+1
+            elif sum > num:
+                break
+
+
+def day9():
+    code = read_ints("day9input.txt")
+
+    start_time = time.time()
+
+    task1 = check(code, 25)
+    start, end = encryption_weakness(code, task1)
+    task2 = max(code[start: end]) + min(code[start: end])
+
+    return time.time() - start_time, task1, task2
+
 # Main
 def run(day):
     run_time, task1, task2 = day()
     print(day.__name__ + ": %.6s s - " % run_time + str(task1) + " " + str(task2))
 
 if __name__ == '__main__':
-    for i in range(1, 9):
+    for i in range(1, 10):
         run(eval("day" + str(i)))
     unittest.main()
 
