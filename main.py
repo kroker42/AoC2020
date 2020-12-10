@@ -562,13 +562,158 @@ def day9():
 
     return time.time() - start_time, task1, task2
 
+# Battery charger
+
+def chain(adapters):
+    adapters.append(0)
+    adapters.sort()
+    adapters.append(adapters[-1] + 3)
+    diffs = [j - i for i, j in zip(adapters[:-1], adapters[1:])]
+    return diffs
+
+def tree_arrange(adapters):
+    nodes = {0: []}
+    for a in adapters[1:]:
+        nodes[a] = []
+        for l in nodes:
+            diff = a - l
+            if diff == 3:
+                l.leaves.append(a)
+
+
+# works for test cases but reboots laptop for main data :-D
+def arrange(adapters):
+    options = [[0]]
+
+    for i in range(1, len(adapters)):
+        new_options = []
+        removed = []
+        for option in options:
+            diff = adapters[i] - option[-1]
+            if diff == 3:
+                option.append(adapters[i])
+            elif diff > 3:
+                removed.append(option)
+            else:
+                new_options.append(option + [adapters[i]])
+        for r in removed:
+            options.remove(r)
+        for o in new_options:
+            options.append(o)
+
+    return len(options)
+
+def tree_arrange(adapter):
+    options = {a: [] for a in adapter}
+    leaves = []
+
+    for a in adapter:
+        diffs = [a - leaf for leaf in leaves]
+        nodes = []
+        for i in range(0, len(diffs)):
+            if diffs[i] == 3:
+                options[leaves[i]].append(a)
+                nodes.append(leaves[i])
+            elif diffs[i] > 3:
+                nodes.append(leaves[i])
+            else:
+                options[leaves[i]].append(a)
+        leaves.append(a)
+        for n in nodes:
+            leaves.remove(n)
+
+    items = list(options.keys())
+    items.reverse()
+
+    counts = {items[0]: 1}
+
+    for a in items[1:]:
+        counts[a] = 0
+        for n in options[a]:
+            counts[a] += counts[n]
+
+    return counts[0]
+
+
+class Day9Test(unittest.TestCase):
+    adapters = [16,
+                10,
+                15,
+                5,
+                1,
+                11,
+                7,
+                19,
+                6,
+                12,
+                4]
+
+    adapters2 = [28,
+            33,
+            18,
+            42,
+            31,
+            14,
+            46,
+            20,
+            48,
+            47,
+            24,
+            23,
+            49,
+            45,
+            19,
+            38,
+            39,
+            11,
+            1,
+            32,
+            25,
+            35,
+            8,
+            17,
+            7,
+            9,
+            4,
+            2,
+            34,
+            10,
+            3]
+
+    def test(self):
+        diffs = chain(self.adapters2)
+        self.assertEqual(0, self.adapters2[0])
+        self.assertEqual(220, diffs.count(1) * diffs.count(3))
+
+    def test_arrange(self):
+        chain(self.adapters)
+        self.assertEqual(8, tree_arrange(self.adapters))
+        self.assertEqual(19208, tree_arrange(self.adapters2))
+
+
+def day10():
+    adapters = read_ints("day10input.txt")
+
+    start_time = time.time()
+
+    adapters.append(0)
+    adapters.sort()
+    adapters.append(adapters[-1] + 3)
+    diffs = [j - i for i, j in zip(adapters[:-1], adapters[1:])]
+
+    task1 = diffs.count(1) * diffs.count(3)
+    task2 = tree_arrange(adapters)
+
+    return time.time() - start_time, task1, task2
+
+
 # Main
 def run(day):
     run_time, task1, task2 = day()
     print(day.__name__ + ": %.6s s - " % run_time + str(task1) + " " + str(task2))
 
 if __name__ == '__main__':
-    for i in range(1, 10):
+    for i in range(1, 11):
         run(eval("day" + str(i)))
     unittest.main()
 
