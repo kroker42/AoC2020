@@ -882,6 +882,136 @@ def day11():
 
     return time.time() - start_time, task1, task2
 
+# Day 12 - move on map
+
+
+directions = ['N', 'E', 'S', 'W']
+
+def rotate(current_direction, degrees):
+    current = directions.index(current_direction)
+    step = degrees // 90
+
+    return directions[(current + step) % 4]
+
+
+def move(pos, facing, instr):
+    if instr[0] in pos:
+        pos[instr[0]] += instr[1]
+    elif instr[0] == 'F':
+        pos[facing] += instr[1]
+    elif instr[0] == 'R':
+        facing = rotate(facing, instr[1])
+    elif instr[0] == 'L':
+        facing = rotate(facing, -instr[1])
+
+    return facing
+
+def manhattan_distance(position):
+    return abs(position['N'] - position['S']) + abs(position['E'] - position['W'])
+
+def rotate_waypoint(wp, degrees):
+    old_wp = {k: v for k,v in wp.items()}
+    for direction in old_wp:
+        wp[direction] = old_wp[rotate(direction, degrees)]
+
+def move_waypoint(pos, wp, instr):
+    if instr[0] in pos:
+        wp[instr[0]] += instr[1]
+    elif instr[0] == 'F':
+        for p in wp.items():
+            pos[p[0]] += p[1] * instr[1]
+    elif instr[0] == 'R':
+        rotate_waypoint(wp, -instr[1])
+    elif instr[0] == 'L':
+        rotate_waypoint(wp, instr[1])
+
+
+class Day12Test(unittest.TestCase):
+    def test_rotate(self):
+        self.assertEqual('N', rotate('W', 90))
+        self.assertEqual('S', rotate('N', 180))
+        self.assertEqual('E', rotate('S', -90))
+        self.assertEqual('W', rotate('S', -270))
+
+    instructions = [(l[0], int(l[1:])) for l in ["F10", "N3", "F7", "R90", "F11"]]
+
+    def test_move(self):
+        pos = dict(zip(directions, [0] * 4))
+        self.assertEqual('E', move(pos, 'E', self.instructions[0]))
+        self.assertEqual({'W': 0, 'E': 10, 'S': 0, 'N': 0}, pos)
+        self.assertEqual('E', move(pos, 'E', self.instructions[1]))
+        self.assertEqual({'W': 0, 'E': 10, 'S': 0, 'N': 3}, pos)
+        self.assertEqual('E', move(pos, 'E', self.instructions[2]))
+        self.assertEqual({'W': 0, 'E': 17, 'S': 0, 'N': 3}, pos)
+        self.assertEqual('S', move(pos, 'E', self.instructions[3]))
+        self.assertEqual({'W': 0, 'E': 17, 'S': 0, 'N': 3}, pos)
+        self.assertEqual('S', move(pos, 'S', self.instructions[4]))
+        self.assertEqual({'W': 0, 'E': 17, 'S': 11, 'N': 3}, pos)
+        self.assertEqual(25, manhattan_distance(pos))
+
+    def test_move_wp(self):
+        pos = dict(zip(directions, [0] * 4))
+        wp = {'W': 0, 'E': 10, 'S': 0, 'N': 1}
+        move_waypoint(pos, wp, self.instructions[0])
+        self.assertEqual({'W': 0, 'E': 100, 'S': 0, 'N': 10}, pos)
+        self.assertEqual({'W': 0, 'E': 10, 'S': 0, 'N': 1}, wp)
+        move_waypoint(pos, wp, self.instructions[1])
+        self.assertEqual({'W': 0, 'E': 100, 'S': 0, 'N': 10}, pos)
+        self.assertEqual({'W': 0, 'E': 10, 'S': 0, 'N': 4}, wp)
+        move_waypoint(pos, wp, self.instructions[2])
+        self.assertEqual({'W': 0, 'E': 170, 'S': 0, 'N': 38}, pos)
+        self.assertEqual({'W': 0, 'E': 10, 'S': 0, 'N': 4}, wp)
+        move_waypoint(pos, wp, self.instructions[3])
+        self.assertEqual({'W': 0, 'E': 170, 'S': 0, 'N': 38}, pos)
+        self.assertEqual({'W': 0, 'S': 10, 'N': 0, 'E': 4}, wp)
+        move_waypoint(pos, wp, self.instructions[4])
+        self.assertEqual({'W': 0, 'E': 214, 'S': 110, 'N': 38}, pos)
+        self.assertEqual({'W': 0, 'S': 10, 'N': 0, 'E': 4}, wp)
+
+        self.assertEqual(286, manhattan_distance(pos))
+
+    def test_rotate_wp(self):
+        pos = dict(zip(directions, [0] * 4))
+        wp = {'N': 1, 'E': 2, 'S': 3, 'W': 4}
+        move_waypoint(pos, wp, ('R', 90))
+        self.assertEqual({'N': 4, 'E': 1, 'S': 2, 'W': 3}, wp)
+        wp = {'N': 1, 'E': 2, 'S': 3, 'W': 4}
+        move_waypoint(pos, wp, ('R', 180))
+        self.assertEqual({'N': 3, 'E': 4, 'S': 1, 'W': 2}, wp)
+        wp = {'N': 1, 'E': 2, 'S': 3, 'W': 4}
+        move_waypoint(pos, wp, ('R', 270))
+        self.assertEqual({'N': 2, 'E': 3, 'S': 4, 'W': 1}, wp)
+
+        wp = {'N': 1, 'E': 2, 'S': 3, 'W': 4}
+        move_waypoint(pos, wp, ('L', 90))
+        self.assertEqual({'N': 2, 'E': 3, 'S': 4, 'W': 1}, wp)
+        wp = {'N': 1, 'E': 2, 'S': 3, 'W': 4}
+        move_waypoint(pos, wp, ('L', 180))
+        self.assertEqual({'N': 3, 'E': 4, 'S': 1, 'W': 2}, wp)
+        wp = {'N': 1, 'E': 2, 'S': 3, 'W': 4}
+        move_waypoint(pos, wp, ('L', 270))
+        self.assertEqual({'N': 4, 'E': 1, 'S': 2, 'W': 3}, wp)
+
+def day12():
+    instructions = [(l[0], int(l[1:])) for l in read_lines("day12input.txt")]
+
+    start_time = time.time()
+
+    facing = 'E'
+    pos = dict(zip(directions, [0] * 4))
+
+    for instr in instructions:
+        facing = move(pos, facing, instr)
+    task1 = manhattan_distance(pos)
+
+    pos = dict(zip(directions, [0] * 4))
+    wp = {'W': 0, 'E': 10, 'S': 0, 'N': 1}
+
+    for instr in instructions:
+        move_waypoint(pos, wp, instr)
+    task2 = manhattan_distance(pos)
+
+    return time.time() - start_time, task1, task2
 
 
 # Main
@@ -893,7 +1023,7 @@ def run(day):
 
 
 if __name__ == '__main__':
-    for i in range(1, 12):
+    for i in range(12, 13):
         run(eval("day" + str(i)))
     unittest.main()
 
