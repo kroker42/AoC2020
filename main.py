@@ -580,29 +580,6 @@ def tree_arrange(adapters):
             if diff == 3:
                 l.leaves.append(a)
 
-
-# works for test cases but reboots laptop for main data :-D
-def arrange(adapters):
-    options = [[0]]
-
-    for i in range(1, len(adapters)):
-        new_options = []
-        removed = []
-        for option in options:
-            diff = adapters[i] - option[-1]
-            if diff == 3:
-                option.append(adapters[i])
-            elif diff > 3:
-                removed.append(option)
-            else:
-                new_options.append(option + [adapters[i]])
-        for r in removed:
-            options.remove(r)
-        for o in new_options:
-            options.append(o)
-
-    return len(options)
-
 def tree_arrange(adapter):
     options = {a: [] for a in adapter}
     leaves = []
@@ -706,14 +683,217 @@ def day10():
 
     return time.time() - start_time, task1, task2
 
+# Day 11 - mass motion
+
+seat_dict = {'#': 2, 'L': 1, '.': 0}
+
+def get_matrix(lines):
+    return [[seat_dict[ch] for ch in l] for l in lines]
+
+def occupied_neighbours(r, c, seats):
+    rows = len(seats)
+    cols = len(seats[0])
+    count = 0
+
+    for i in range(r - 1, r + 2):
+        for j in range(c - 1, c + 2):
+            if i >= 0 and i < rows and j >= 0 and j < cols:
+                count += int(seats[i][j] == 2)
+
+    return count - (seats[r][c] == 2)
+
+def left_neighbour(r, c, seats):
+    return next((x for x in reversed(seats[r][0:c]) if x > 0), 0) == 2
+
+def right_neighbour(r, c, seats):
+    return next((x for x in seats[r][c+1:] if x > 0), 0) == 2
+
+def up_neighbour(r, c, seats):
+    return next((x for x in reversed([row[c] for row in seats[0:r]]) if x > 0), 0) == 2
+
+def down_neighbour(r, c, seats):
+    return next((x for x in [row[c] for row in seats[r+1:]] if x > 0), 0) == 2
+
+def left_up_neighbour(r, c, seats):
+    n = []
+
+    r -= 1
+    c -= 1
+    while r >= 0 and c >= 0:
+        n.append(seats[r][c])
+        r -= 1
+        c -= 1
+
+    return next((x for x in n if x > 0), 0) == 2
+
+def left_down_neighbour(row, col, seats):
+    n = []
+
+    r = row + 1
+    c = col - 1
+    while r < len(seats) and c >= 0:
+        n.append(seats[r][c])
+        r += 1
+        c -= 1
+
+    return next((x for x in n if x > 0), 0) == 2
+
+def right_up_neighbour(r, c, seats):
+    n = []
+
+    r -= 1
+    c += 1
+    while r >= 0 and c < len(seats[0]):
+        n.append(seats[r][c])
+        r -= 1
+        c += 1
+
+    return next((x for x in n if x > 0), 0) == 2
+
+def right_down_neighbour(r, c, seats):
+    n = []
+
+    r += 1
+    c += 1
+    while r < len(seats) and c < len(seats[0]):
+        n.append(seats[r][c])
+        r += 1
+        c += 1
+
+    return next((x for x in n if x > 0), 0) == 2
+
+def seen_neighbours(r, c, seats):
+    count = left_neighbour(r, c, seats) + \
+        right_neighbour(r, c, seats) + \
+        up_neighbour(r, c, seats) + \
+        down_neighbour(r, c, seats) +\
+        left_up_neighbour(r, c, seats) + \
+        left_down_neighbour(r, c, seats) + \
+        right_up_neighbour(r, c, seats) + \
+        right_down_neighbour(r, c, seats)
+    return count
+
+
+def move_people(seats, max_n, neighbour_alg):
+    new_seats = [row.copy() for row in seats]
+
+    for r in range(0, len(seats)):
+        for c in range(0, len(seats[0])):
+            neighbours = neighbour_alg(r, c, seats) if seats[r][c] else 0
+            if seats[r][c] == 1 and not neighbours:
+                new_seats[r][c] = 2
+            elif seats[r][c] == 2 and neighbours >= max_n:
+                new_seats[r][c] = 1
+
+    return new_seats
+
+class Day11Test(unittest.TestCase):
+    seats = ["L.LL.LL.LL",
+            "LLLLLLL.LL",
+            "L.L.L..L..",
+            "LLLL.LL.LL",
+            "L.LL.LL.LL",
+            "L.LLLLL.LL",
+            "..L.L.....",
+            "LLLLLLLLLL",
+            "L.LLLLLL.L",
+            "L.LLLLL.LL"]
+
+    exp = [
+        "#.#L.L#.##",
+        "#LLL#LL.L#",
+        "L.#.L..#..",
+        "#L##.##.L#",
+        "#.#L.LL.LL",
+        "#.#L#L#.##",
+        "..L.L.....",
+        "#L#L##L#L#",
+        "#.LLLLLL.L",
+        "#.#L#L#.##"]
+
+    seats2 = [
+        "#.L#.L#.L#",
+        "#LLLLLL.LL",
+        "L.L.L..#..",
+        "##L#.#L.L#",
+        "L.L#.LL.L#",
+        "#.LLLL#.LL",
+        "..#.L.....",
+        "LLL###LLL#",
+        "#.LLLLL#.L",
+        "#.L#LL#.L#"]
+
+    def test(self):
+        seats = get_matrix(self.seats)
+        new_seats = move_people(seats, 4, occupied_neighbours)
+        while seats != new_seats:
+            seats = [i.copy() for i in new_seats]
+            new_seats = move_people(seats, 4, occupied_neighbours)
+
+        exp = get_matrix(self.exp)
+        self.assertEqual(exp, new_seats)
+
+    def test_left_neighbour(self):
+        seats = get_matrix(self.exp)
+        self.assertTrue(left_neighbour(0, 3, seats))
+        self.assertFalse(left_neighbour(0, 5, seats))
+        self.assertFalse(left_neighbour(0, 0, seats))
+
+    def test_seen_neighbours(self):
+        seats = get_matrix(self.exp)
+        self.assertEqual(2, seen_neighbours(0, 3, seats))
+        self.assertEqual(5, seen_neighbours(4, 6, seats))
+
+
+def day11():
+    seats = [l.strip() for l in read_lines("day11input.txt")]
+    seats = get_matrix(seats)
+
+    flatten = lambda t: [item for sublist in t for item in sublist]
+
+    start_time = time.time()
+
+    new_seats = move_people(seats, 4, occupied_neighbours)
+    prev_seats = seats
+    count_iter = 0
+
+    while prev_seats != new_seats:
+        count_iter += 1
+        prev_seats = new_seats
+        new_seats = move_people(prev_seats, 4, occupied_neighbours)
+
+    print(count_iter)
+
+    task1 = sum(1 for i in flatten(new_seats) if i == 2)
+
+    start_time = time.time()
+
+    new_seats = move_people(seats, 5, seen_neighbours)
+    prev_seats = seats
+    count_iter = 0
+    while prev_seats != new_seats:
+        count_iter += 1
+        prev_seats = new_seats
+        new_seats = move_people(prev_seats, 5, seen_neighbours)
+
+    task2 = sum(1 for i in flatten(new_seats) if i == 2)
+
+    print(count_iter)
+
+    return time.time() - start_time, task1, task2
+
+
 
 # Main
+
+
 def run(day):
     run_time, task1, task2 = day()
     print(day.__name__ + ": %.6s s - " % run_time + str(task1) + " " + str(task2))
 
+
 if __name__ == '__main__':
-    for i in range(1, 11):
+    for i in range(1, 12):
         run(eval("day" + str(i)))
     unittest.main()
 
