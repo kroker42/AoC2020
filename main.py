@@ -1,13 +1,14 @@
 # coding=utf-8
 
-from itertools import combinations
-from itertools import permutations
-import operator
 import functools
+import operator
 import re
-
 import time
 import unittest
+from itertools import combinations
+from itertools import permutations
+import itertools
+from math import prod
 
 # read one int per line from file
 def read_ints(fname):
@@ -883,14 +884,10 @@ def day11():
 
     new_seats = move_people(seats, 4, occupied_neighbours)
     prev_seats = seats
-    count_iter = 0
 
     while prev_seats != new_seats:
-        count_iter += 1
         prev_seats = new_seats
         new_seats = move_people(prev_seats, 4, occupied_neighbours)
-
-#    print(count_iter)
 
     task1 = count_occupied(new_seats)
 
@@ -901,18 +898,14 @@ def day11():
     new_seats = move_people(seats, 5, seen_neighbours)
 #    new_seats = seats
     prev_seats = seats
-    count_iter = 0
+
     while prev_seats != new_seats:
-        count_iter += 1
         prev_seats = new_seats
         new_seats = move_people(prev_seats, 5, seen_neighbours)
 
     task2 = count_occupied(new_seats)
 
     run_time = time.time() - start_time
-
-
-#    print(count_iter)
 
     return run_time, task1, task2
 
@@ -1015,6 +1008,382 @@ def day12():
 
     return time.time() - start_time, task1, task2
 
+# Day 13 - bus schedules
+
+
+def get_sched(input):
+    timestamp = [int(input[0])]
+    buses = input[1].split(',')
+    for b in buses:
+        timestamp.append(0 if b == 'x' else int(b))
+    return timestamp
+
+def day13():
+    sched = get_sched(read_lines("day13input.txt"))
+
+#    sched = [939, 7, 13, 'x', 'x', 59, 'x', 31, 19]
+#    sched = [i for i in sched if isinstance(i, int)]
+
+    start_time = time.time()
+
+    arr_time = sched[0]
+    dep_time = 0
+    bus_id = 0
+
+    while not dep_time:
+        for bus in sched[1:]:
+            if bus and arr_time % bus == 0:
+                dep_time = arr_time
+                bus_id = bus
+                break
+        arr_time += 1
+
+    task1 = (dep_time - sched[0]) * bus_id
+
+    contest = {}
+    i = 0
+    for bus in sched[1:]:
+        if bus:
+            contest[bus] = bus - i
+        i += 1
+
+    # b = iter(contest)
+    # print(gcd(next(b), next(b)))
+    # print(gcd(next(b), next(b)))
+    # print(gcd(next(b), next(b)))
+
+
+
+    #    sched = [939, 7, 13, 'x', 'x', 59, 'x', 31, 19]
+
+    # t % 939 = 0
+    # t % 7  = 6
+    # t % 13 = 11
+    # t % 59 = 54
+    # t % 31 = 24
+    # t % 19 = 11
+
+
+    # timestamp = contest[0]
+    # found = False
+    # while not found:
+    #     print(timestamp)
+    #     found = True
+    #     for i in contest:
+    #         if (timestamp + i) % contest[i] > 0:
+    #             print(str(i) + ' ' + str(contest[i]))
+    #             timestamp += contest[0]
+    #             found = False
+    #             break
+
+
+    task2 = None
+
+    return time.time() - start_time, task1, task2
+
+# Day 14 bitmasks
+
+def read_mask(input):
+    mask0 = ''.join(['0' if i == '0' else '1' for i in input])
+    mask1 = ''.join(['1' if i == '1' else '0' for i in input])
+
+    return int('0b' + mask0, 2), int('0b' + mask1, 2)
+
+def run_instructions(instructions):
+    mem = dict()
+
+    for instr in instructions:
+        if instr[0] == 'mask ':
+            mask0, mask1 = read_mask(instr[1].strip())
+        else:
+            val = int(instr[1])
+            mem[int(instr[0])] = (val | mask1) & mask0
+
+    return mem
+
+def read_mask_v2(input):
+    mask0s = [['1'] * 36]
+    mask1 = ['1' if i == '1' else '0' for i in input]
+
+    for i in range(0, 36):
+        if input[i] == 'X':
+            mask1[i] = '1'
+            m0s = [m.copy() for m in mask0s]
+            for m0 in m0s:
+                m0[i] = '0'
+            mask0s += m0s
+    return [int('0b' + ''.join(m), 2) for m in mask0s], int('0b' + ''.join(mask1), 2)
+
+
+def run_instructions_v2(instructions):
+    mem = dict()
+
+    for instr in instructions:
+        if instr[0] == 'mask ':
+            mask0s, mask1 = read_mask_v2(instr[1].strip())
+        else:
+            addr = int(instr[0])
+            val = int(instr[1])
+            for m0 in mask0s:
+                mem[(addr | mask1) & m0] = val
+    return mem
+
+
+class Day13Test(unittest.TestCase):
+    def test_mask(self):
+        mask0, mask1 = read_mask('X' * 36)
+        self.assertEqual(int('1' * 36, 2), mask0)
+        self.assertEqual(0, mask1)
+
+        mask0, mask1 = read_mask(('X' * 34) + '01')
+        exp0 = int('1' * 34 + '01', 2)
+        self.assertEqual(exp0, mask0)
+        self.assertEqual(1, mask1)
+
+    def test(self):
+        instr = [
+            "mask = XXXXXXXXXXXXXXXXXXXXXXXXXXXXX1XXXX0X",
+            "mem[8] = 11",
+            "mem[7] = 101",
+            "mem[8] = 0",
+            "mem[1] = 3"]
+        instructions = [instr.split('=') if instr.startswith('mask') else re.findall('\d+', instr) for instr in instr]
+        mem = run_instructions(instructions)
+
+        self.assertEqual(3, len(mem))
+        self.assertEqual(101, mem[7])
+        self.assertEqual(64, mem[8])
+        self.assertEqual(65, mem[1])
+
+    def test_v2(self):
+        instr = [
+            "mask = 000000000000000000000000000000X1001X",
+            "mem[42] = 100",
+            "mask = 00000000000000000000000000000000X0XX",
+            "mem[26] = 1"]
+        instructions = [instr.split('=') if instr.startswith('mask') else re.findall('\d+', instr) for instr in instr]
+        m0s, m1 = read_mask_v2(instructions[0][1].strip())
+        self.assertEqual(59, (42 | m1) & m0s[0])
+        self.assertEqual(27, (42 | m1) & m0s[1])
+        self.assertEqual(58, (42 | m1) & m0s[2])
+        self.assertEqual(26, (42 | m1) & m0s[3])
+
+        m0s, m1 = read_mask_v2(instructions[2][1].strip())
+        self.assertEqual(8, len(m0s))
+        self.assertEqual(27, (26 | m1) & m0s[0])
+        self.assertEqual(19, (26 | m1) & m0s[1])
+        self.assertEqual(25, (26 | m1) & m0s[2])
+        self.assertEqual(17, (26 | m1) & m0s[3])
+        self.assertEqual(26, (26 | m1) & m0s[4])
+        self.assertEqual(18, (26 | m1) & m0s[5])
+        self.assertEqual(24, (26 | m1) & m0s[6])
+        self.assertEqual(16, (26 | m1) & m0s[7])
+
+def day14():
+    instructions = [instr.split('=') if instr.startswith('mask') else re.findall('\d+', instr) for instr in read_lines("day14input.txt")]
+
+    start_time = time.time()
+
+    mem = run_instructions(instructions)
+    task1 = sum(mem.values())
+
+    mem = run_instructions_v2(instructions)
+    task2 = sum(mem.values())
+
+    return time.time() - start_time, task1, task2
+
+# Day 15 memory game
+
+# needs a 0 in the starting sequence
+def number_game(input, turns):
+    nums = {}
+
+    for i in range(0, len(input)):
+        nums[input[i]] = (i + 1, None)
+
+    last_spoken = input[-1]
+
+    for turn in range(len(input) + 1, turns + 1):
+        if not nums[last_spoken][1]:
+            nums[0] = (turn, nums[0][0])
+            last_spoken = 0
+        else:
+            diff = nums[last_spoken][0] - nums[last_spoken][1]
+            if diff not in nums:
+                nums[diff] = (turn, None)
+            else:
+                nums[diff] = (turn, nums[diff][0])
+            last_spoken = diff
+
+    return last_spoken
+
+
+class Day15Test(unittest.TestCase):
+    def test(self):
+        self.assertEqual(0, number_game([0, 3, 6], 4))
+        self.assertEqual(436, number_game([0, 3, 6], 2020))
+
+
+def day15():
+    input = [1, 20, 8, 12, 0, 14]
+
+    start_time = time.time()
+
+    task1 = number_game(input, 2020)
+    task2 = number_game(input, 30000000)
+
+    return time.time() - start_time, task1, task2
+
+
+# Day 16
+
+def parse_tickets(input):
+    lines = iter(input)
+    line = next(lines)
+
+    ranges = {}
+    while line and not line.isspace():
+        field = line.split(':')[0]
+        v = re.findall(r"(\d+)-(\d+)", line)
+        v = [range(int(i[0]), int(i[1]) + 1) for i in v]
+        ranges[field] = v
+        line = next(lines)
+
+    next(lines)
+    ticket = [int(i) for i in next(lines).split(',')]
+
+    next(lines)
+    next(lines)
+    line = next(lines)
+
+    nearby_tickets = []
+    while line and not line.isspace():
+        nearby_tickets.append([int(i) for i in line.split(',')])
+        line = next(lines, "")
+
+    return ranges, nearby_tickets, ticket
+
+def is_valid(val, ranges):
+    for r in ranges:
+        if val in r:
+            return True
+    return False
+
+def get_invalid_value(ticket, ranges):
+    for i in ticket:
+        val = i
+        valid = is_valid(i, ranges)
+        if not valid:
+            return val
+    return 0
+
+def map_fields(fields, no_fields):
+    field_map = {}
+    while len(field_map) < no_fields:
+        for col_fld in fields.items():
+            if len(col_fld[1]) == 1:
+                field_map[col_fld[1][0]] = col_fld[0]
+            else:
+                for f in col_fld[1]:
+                    if f in field_map:
+                        col_fld[1].remove(f)
+    return field_map
+
+def possible_fields2(tickets, ranges):
+    fields = {k: [] for k in ranges}
+
+    for r in ranges.items():
+        for i in range(0, len(tickets[0])):
+            for t in tickets:
+                valid = is_valid(t[i], r[1])
+                if not valid:
+                    break
+            if valid:
+                fields[r[0]].append(i)
+    return fields
+
+
+class Day16Test(unittest.TestCase):
+    tickets = [
+        "class: 1-3 or 5-7",
+        "row: 6-11 or 33-44",
+        "seat: 13-40 or 45-50",
+        "",
+        "your ticket:",
+        "7,1,14",
+        "",
+        "nearby tickets:",
+        "7,3,47",
+        "40,4,50",
+        "55,2,20",
+        "38,6,12"]
+
+    def test(self):
+        ranges, nearby_tickets, ticket = parse_tickets(self.tickets)
+        self.assertEqual([range(1, 4), range(5, 8)], ranges['class'])
+
+        all_ranges = list(itertools.chain.from_iterable(ranges.values()))
+
+        self.assertEqual(0, get_invalid_value(nearby_tickets[0], all_ranges))
+        self.assertEqual(4, get_invalid_value(nearby_tickets[1], all_ranges))
+        self.assertEqual(55, get_invalid_value(nearby_tickets[2], all_ranges))
+        self.assertEqual(12, get_invalid_value(nearby_tickets[3], all_ranges))
+
+    def test_categories(self):
+        input = [
+            "class: 0-1 or 4-19",
+            "row: 0-5 or 8-19",
+            "seat: 0-13 or 16-19",
+            "",
+            "your ticket:",
+            "11,12,13",
+            "",
+            "nearby tickets:",
+            "3,9,18",
+            "15,1,5",
+            "5,14,9"]
+
+        ranges, nearby_tickets, ticket = parse_tickets(input)
+        fields = possible_fields2(nearby_tickets, ranges)
+        field_map = map_fields(fields, len(ranges))
+
+def day16():
+    input = read_lines("day16input.txt")
+
+    ranges, nearby_tickets, ticket = parse_tickets(input)
+    all_ranges = list(itertools.chain.from_iterable(ranges.values()))
+
+    start_time = time.time()
+
+    task1 = 0
+
+    valid_tickets = []
+    for t in nearby_tickets:
+        val = get_invalid_value(t, all_ranges)
+        task1 += val
+        if val == 0:
+            valid_tickets.append(t)
+
+    fields = possible_fields2(valid_tickets, ranges)
+    sorted_fields = list(fields.items())
+    sorted_fields.sort(key=lambda a: len(a[1]))
+
+    seen = []
+    for f in sorted_fields:
+        d = set(f[1]) - set(seen)
+        if len(d) == 1:
+            seen.append(d.pop())
+            fields[f[0]] = seen[-1]
+        else:
+            fields[f[0]] = None
+
+    dep_fields = ["departure location", "departure station", "departure platform",
+                  "departure track", "departure date", "departure time"]
+
+    task2 = prod([ticket[fields[f]] for f in dep_fields])
+
+    return time.time() - start_time, task1, task2
+
 
 # Main
 
@@ -1025,7 +1394,7 @@ def run(day):
 
 
 if __name__ == '__main__':
-    for i in range(1, 13):
+    for i in range(16, 17):
         run(eval("day" + str(i)))
     unittest.main()
 
