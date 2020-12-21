@@ -1,8 +1,12 @@
 # coding=utf-8
 
 import unittest
+import time
+
 import re
 import itertools
+from math import prod
+
 from filereader import read_lines
 
 # Day 16
@@ -222,6 +226,9 @@ class Test21(unittest.TestCase):
 
 def day21():
     foods = [parse_food(l) for l in read_lines('day21input.txt')]
+
+    start_time = time.time()
+
     allergens, ingredients = get_possible_allergens(foods)
 
     poss_allergenic_ingredients = set()
@@ -237,7 +244,7 @@ def day21():
     sorted_allergens = {k: v for k, v in sorted(allergen_map.items(), key=lambda item: item[1])}
     task2 = ','.join(sorted_allergens.keys())
 
-    return 0, task1, task2
+    return time.time() - start_time, task1, task2
 
 
 
