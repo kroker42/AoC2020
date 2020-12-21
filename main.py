@@ -5,18 +5,24 @@ import operator
 import re
 import time
 import unittest
+import glob
+
 from itertools import combinations
 from itertools import permutations
-import itertools
 from math import prod
+
+import np
+
+from filereader import read_lines
+from GameOfLife import day11
+from GameOfLife import day17
+from langs import day16
+from langs import day21
 
 # read one int per line from file
 def read_ints(fname):
     return [int(line) for line in open(fname)]
 
-# read lines from file
-def read_lines(fname):
-    return [line for line in open(fname)]
 
 # read multiple-line records from file separated by empty line
 def read_records(fname):
@@ -684,231 +690,6 @@ def day10():
 
     return time.time() - start_time, task1, task2
 
-# Day 11 - game of life
-
-seat_dict = {'#': 2, 'L': 1, '.': 0}
-
-def get_matrix(lines):
-    return [[seat_dict[ch] for ch in l] for l in lines]
-
-def occupied_neighbours(r, c, seats):
-    no_rows = len(seats)
-    no_cols = len(seats[0])
-    count = 0
-
-    max_no = 4 if seats[r][c] == 2 else 0
-
-    for i in range(r - 1, r + 2):
-        if i < 0:
-            continue
-        if i >= no_rows:
-            break
-        if count > max_no:
-            break
-
-        for j in range(c - 1, c + 2):
-            if j >= 0 and j < no_cols:
-                count += seats[i][j] == 2
-
-    return count - (seats[r][c] == 2)
-
-def left_neighbour(r, c, seats):
-    for x in reversed(seats[r][0:c]):
-        if x > 0:
-            return x == 2
-    return 0
-
-def right_neighbour(r, c, seats):
-    for x in seats[r][c+1:]:
-        if x > 0:
-            return x == 2
-    return 0
-
-def up_neighbour(r, c, seats):
-    for row in reversed(seats[0:r]):
-        if row[c] > 0:
-            return row[c] == 2
-    return 0
-
-def down_neighbour(r, c, seats):
-    for row in seats[r+1:]:
-        if row[c] > 0:
-            return row[c] == 2
-    return 0
-
-def left_up_neighbour(r, c, seats):
-    r -= 1
-    c -= 1
-    while r >= 0 and c >= 0:
-        if seats[r][c]:
-            return seats[r][c] == 2
-        r -= 1
-        c -= 1
-
-    return 0
-
-def left_down_neighbour(row, col, seats):
-    r = row + 1
-    c = col - 1
-    while r < len(seats) and c >= 0:
-        if seats[r][c]:
-            return seats[r][c] == 2
-        r += 1
-        c -= 1
-
-    return 0
-
-def right_up_neighbour(r, c, seats):
-    r -= 1
-    c += 1
-    while r >= 0 and c < len(seats[0]):
-        if seats[r][c]:
-            return seats[r][c] == 2
-        r -= 1
-        c += 1
-
-    return 0
-
-
-def right_down_neighbour(r, c, seats):
-    r += 1
-    c += 1
-    while r < len(seats) and c < len(seats[0]):
-        if seats[r][c]:
-            return seats[r][c] == 2
-        r += 1
-        c += 1
-
-    return 0
-
-neighbour_counters = [
-    left_neighbour, right_neighbour, up_neighbour, down_neighbour,
-    left_up_neighbour, left_down_neighbour, right_up_neighbour, right_down_neighbour]
-
-
-def seen_neighbours(r, c, seats):
-    count = 0
-    max_no = 5 if seats[r][c] == 2 else 0
-
-    for counter in neighbour_counters:
-        if count > max_no:
-            break
-        count += counter(r, c, seats)
-    return count
-
-
-def move_people(seats, max_n, neighbour_alg):
-    new_seats = [row.copy() for row in seats]
-
-    for r in range(0, len(seats)):
-        for c in range(0, len(seats[0])):
-            if seats[r][c]:
-                neighbours = neighbour_alg(r, c, seats)
-                if seats[r][c] == 1 and not neighbours:
-                    new_seats[r][c] = 2
-                elif seats[r][c] == 2 and neighbours >= max_n:
-                    new_seats[r][c] = 1
-
-    return new_seats
-
-
-class Day11Test(unittest.TestCase):
-    seats = [
-        "L.LL.LL.LL",
-        "LLLLLLL.LL",
-        "L.L.L..L..",
-        "LLLL.LL.LL",
-        "L.LL.LL.LL",
-        "L.LLLLL.LL",
-        "..L.L.....",
-        "LLLLLLLLLL",
-        "L.LLLLLL.L",
-        "L.LLLLL.LL"]
-
-    exp = [
-        "#.#L.L#.##",
-        "#LLL#LL.L#",
-        "L.#.L..#..",
-        "#L##.##.L#",
-        "#.#L.LL.LL",
-        "#.#L#L#.##",
-        "..L.L.....",
-        "#L#L##L#L#",
-        "#.LLLLLL.L",
-        "#.#L#L#.##"]
-
-    seats2 = [
-        "#.L#.L#.L#",
-        "#LLLLLL.LL",
-        "L.L.L..#..",
-        "##L#.#L.L#",
-        "L.L#.LL.L#",
-        "#.LLLL#.LL",
-        "..#.L.....",
-        "LLL###LLL#",
-        "#.LLLLL#.L",
-        "#.L#LL#.L#"]
-
-    def test(self):
-        seats = get_matrix(self.seats)
-        new_seats = move_people(seats, 4, occupied_neighbours)
-        while seats != new_seats:
-            seats = [i.copy() for i in new_seats]
-            new_seats = move_people(seats, 4, occupied_neighbours)
-
-        exp = get_matrix(self.exp)
-        self.assertEqual(exp, new_seats)
-
-    def test_left_neighbour(self):
-        seats = get_matrix(self.exp)
-        self.assertTrue(left_neighbour(0, 3, seats))
-        self.assertFalse(left_neighbour(0, 5, seats))
-        self.assertFalse(left_neighbour(0, 0, seats))
-
-    def test_seen_neighbours(self):
-        seats = get_matrix(self.exp)
-        self.assertEqual(1, seen_neighbours(0, 3, seats))
-        self.assertEqual(6, seen_neighbours(3, 2, seats))
-
-def count_occupied(seats):
-    count = 0
-    for row in seats:
-        count += sum(i == 2 for i in row)
-    return count
-
-def day11():
-    seats = [l.strip() for l in read_lines("day11input.txt")]
-    seats = get_matrix(seats)
-
-    start_time = time.time()
-
-    new_seats = move_people(seats, 4, occupied_neighbours)
-    prev_seats = seats
-
-    while prev_seats != new_seats:
-        prev_seats = new_seats
-        new_seats = move_people(prev_seats, 4, occupied_neighbours)
-
-    task1 = count_occupied(new_seats)
-
-    run_time = time.time() - start_time
-
- #   start_time = time.time()
-
-    new_seats = move_people(seats, 5, seen_neighbours)
-#    new_seats = seats
-    prev_seats = seats
-
-    while prev_seats != new_seats:
-        prev_seats = new_seats
-        new_seats = move_people(prev_seats, 5, seen_neighbours)
-
-    task2 = count_occupied(new_seats)
-
-    run_time = time.time() - start_time
-
-    return run_time, task1, task2
-
 # Day 12 - move ship
 
 
@@ -1235,154 +1016,307 @@ def day15():
     return time.time() - start_time, task1, task2
 
 
-# Day 16
+# Day 18: expression tree!
 
-def parse_tickets(input):
-    lines = iter(input)
-    line = next(lines)
-
-    ranges = {}
-    while line and not line.isspace():
-        field = line.split(':')[0]
-        v = re.findall(r"(\d+)-(\d+)", line)
-        v = [range(int(i[0]), int(i[1]) + 1) for i in v]
-        ranges[field] = v
-        line = next(lines)
-
-    next(lines)
-    ticket = [int(i) for i in next(lines).split(',')]
-
-    next(lines)
-    next(lines)
-    line = next(lines)
-
-    nearby_tickets = []
-    while line and not line.isspace():
-        nearby_tickets.append([int(i) for i in line.split(',')])
-        line = next(lines, "")
-
-    return ranges, nearby_tickets, ticket
-
-def is_valid(val, ranges):
-    for r in ranges:
-        if val in r:
-            return True
-    return False
-
-def get_invalid_value(ticket, ranges):
-    for i in ticket:
-        val = i
-        valid = is_valid(i, ranges)
-        if not valid:
-            return val
-    return 0
-
-def map_fields(fields, no_fields):
-    field_map = {}
-    while len(field_map) < no_fields:
-        for col_fld in fields.items():
-            if len(col_fld[1]) == 1:
-                field_map[col_fld[1][0]] = col_fld[0]
-            else:
-                for f in col_fld[1]:
-                    if f in field_map:
-                        col_fld[1].remove(f)
-    return field_map
-
-def possible_fields2(tickets, ranges):
-    fields = {k: [] for k in ranges}
-
-    for r in ranges.items():
-        for i in range(0, len(tickets[0])):
-            for t in tickets:
-                valid = is_valid(t[i], r[1])
-                if not valid:
-                    break
-            if valid:
-                fields[r[0]].append(i)
-    return fields
+class Expr:
+    def __init__(self, l, op, r):
+        self.left = l
+        self.op = op
+        self.right = r
+        print(str(l), str(op), str(r))
 
 
-class Day16Test(unittest.TestCase):
-    tickets = [
-        "class: 1-3 or 5-7",
-        "row: 6-11 or 33-44",
-        "seat: 13-40 or 45-50",
-        "",
-        "your ticket:",
-        "7,1,14",
-        "",
-        "nearby tickets:",
-        "7,3,47",
-        "40,4,50",
-        "55,2,20",
-        "38,6,12"]
+    def eval(self):
+        if not isinstance(self.left, int):
+            self.left = self.left.eval()
+        if not isinstance(self.right, int):
+            self.right = self.right.eval()
+
+        print(str(self.left), str(self.op), str(self.right))
+
+        return self.op([self.left, self.right])
+
+
+ops = {'*': prod, '+': sum}
+
+# ['1', '*', '2', '+', '3']
+def parse_expr(l):
+    return Expr(int(l[0]), ops[l[1]], parse_expr(l[2:])) if len(l) > 1 else int(l[0])
+
+def parse_expr2(s):
+    expr = ""
+    count = 0
+    if s[0] == '(':
+        pass
+
+
+
+class Test18(unittest.TestCase):
+    input1 = "1 + 2 * 3 + 4 * 5 + 6"
+    input2 = "1 + (2 * 3) + (4 * (5 + 6))"
+
+    input1 = "(((((1 + 2) * 3) + 4) * 5) + 6)"
+    input2 = "((1 + (2 * 3)) + (4 * (5 + 6)))"
+
+    #print(list(reversed(input2)))
+    #print(input2)
+
+    def test_parse(self):
+        input1 = self.input1.split()
+        input1.reverse()
+#        self.assertEqual(71, parse_expr(input1).eval())
+
+    def test_parse_brackets(self):
+ #       parse_expr2(")2 + 1(")
+        pass
+
+
+# Day 19: Decode scrambled messages
+
+def parse_one_rule(rule, rules):
+    if (isinstance(rule, int)):
+        return rules[rule]
+    return rule
+
+def parse_pair_rule(rule, rules):
+    r = [parse_one_rule(rule[0], rules), parse_one_rule(rule[1], rules)]
+
+    for i in r:
+        if not isinstance(i, str):
+            return r
+    return ''.join(r)
+
+
+def parse_rule(rule, rules):
+    rule0 = parse_pair_rule(rule, rules)
+    #print(rule0)
+
+    while not isinstance(rule0[0], str):
+        if isinstance(rule0[0], int):
+            rule0[0] = parse_one_rule(rule0[0], rules)
+        else:
+            rule0[0] = parse_pair_rule(rule0[0], rules)
+
+    for rule in rule0[1]:
+        #print(rule)
+        for r in rule:
+            r = parse_pair_rule(r, rules)
+            # while not isinstance(r[0], str):
+            #     if isinstance(r[0], int):
+            #         r[0] = parse_one_rule(r[0], rules)
+            #     else:
+            #         r[0] = parse_pair_rule(r[0], rules)
+
+#    rule0[1][0] = parse_pair_rule(rule0[1][0], rules)
+#    rule0[1][1] = parse_pair_rule(rule0[1][1], rules)
+
+    #print(rule0)
+
+
+class Test19(unittest.TestCase):
+    input = ["1 2", "a", ["1 3", "3 1"], "b"]
+    input2 = {0: [1, 2], 1: "a", 2: [[1, 3], [3, 1]], 3: "b"}
+    input3 = [[[1, 2]], "a", [[1, 3], [3, 1]], "b"]
 
     def test(self):
-        ranges, nearby_tickets, ticket = parse_tickets(self.tickets)
-        self.assertEqual([range(1, 4), range(5, 8)], ranges['class'])
+        pass
+#        rule0 = parse_rule(self.input2[0], self.input2)
+#        self.assertEqual({"aab", "aba"}, rule0)
 
-        all_ranges = list(itertools.chain.from_iterable(ranges.values()))
+#        self.assertEqual({"aaaabb", "aaabab", "abbabb", "abbbab", "aabaab", "aabbbb", "abaaab", "ababbb"}, rules)
 
-        self.assertEqual(0, get_invalid_value(nearby_tickets[0], all_ranges))
-        self.assertEqual(4, get_invalid_value(nearby_tickets[1], all_ranges))
-        self.assertEqual(55, get_invalid_value(nearby_tickets[2], all_ranges))
-        self.assertEqual(12, get_invalid_value(nearby_tickets[3], all_ranges))
+# Day 20
 
-    def test_categories(self):
-        input = [
-            "class: 0-1 or 4-19",
-            "row: 0-5 or 8-19",
-            "seat: 0-13 or 16-19",
-            "",
-            "your ticket:",
-            "11,12,13",
-            "",
-            "nearby tickets:",
-            "3,9,18",
-            "15,1,5",
-            "5,14,9"]
+def reverse_str(s):
+    return ''.join(list(reversed(s)))
 
-        ranges, nearby_tickets, ticket = parse_tickets(input)
-        fields = possible_fields2(nearby_tickets, ranges)
-        field_map = map_fields(fields, len(ranges))
+def get_square_outline(l):
+    id = int(re.search(r"(\d+)", l[0]).groups()[0])
+    right = ''.join([i[-1] for i in l[1:11]])
+    left = ''.join([i[0] for i in l[1:11]])
 
-def day16():
-    input = read_lines("day16input.txt")
+    return (id,
+            [l[1], reverse_str(l[1]),
+             right, reverse_str(right),
+             l[10], reverse_str(l[10]),
+             left, reverse_str(left)])
 
-    ranges, nearby_tickets, ticket = parse_tickets(input)
-    all_ranges = list(itertools.chain.from_iterable(ranges.values()))
+def get_outlines(squares):
+    outlines = {}
+    for i in range(0, len(squares)//12):
+        key, val = get_square_outline(squares[i * 12: (i + 1) * 12])
+        outlines[key] = val
+    return outlines
 
-    start_time = time.time()
+def find_corners(image_map):
+    # counts = dict(zip(outlines.keys(), [0] * len(outlines)))
+    #
+    # for i in outlines:
+    #     for j in outlines:
+    #         if i < j:
+    #             intersect = set(outlines[i]).intersection(set(outlines[j]))
+    #             if len(intersect):
+    #                 counts[i] += 1
+    #                 counts[j] += 1
 
-    task1 = 0
+    corners = []
+    for c in image_map:
+        if len(image_map[c]) == 2:
+            corners.append(c)
+    return corners
 
-    valid_tickets = []
-    for t in nearby_tickets:
-        val = get_invalid_value(t, all_ranges)
-        task1 += val
-        if val == 0:
-            valid_tickets.append(t)
+def build_image_map(outlines):
+    image_map = {k: [] for k in outlines.keys()}
 
-    fields = possible_fields2(valid_tickets, ranges)
-    sorted_fields = list(fields.items())
-    sorted_fields.sort(key=lambda a: len(a[1]))
+    for i in outlines:
+        for j in outlines:
+            if i < j:
+                intersect = set(outlines[i]).intersection(set(outlines[j]))
+                if len(intersect):
+                    image_map[i].append((j, intersect))
+                    image_map[j].append((i, intersect))
+    return image_map
 
-    seen = []
-    for f in sorted_fields:
-        d = set(f[1]) - set(seen)
-        if len(d) == 1:
-            seen.append(d.pop())
-            fields[f[0]] = seen[-1]
-        else:
-            fields[f[0]] = None
+class Test20(unittest.TestCase):
+    inp = [
+        "Tile 2311:",
+        "..##.#..#.",
+        "##..#.....",
+        "#...##..#.",
+        "####.#...#",
+        "##.##.###.",
+        "##...#.###",
+        ".#.#.#..##",
+        "..#....#..",
+        "###...#.#.",
+        "..###..###",
+        "",
+        "Tile 1951:",
+        "#.##...##.",
+        "#.####...#",
+        ".....#..##",
+        "#...######",
+        ".##.#....#",
+        ".###.#####",
+        "###.##.##.",
+        ".###....#.",
+        "..#.#..#.#",
+        "#...##.#..",
+        "",
+        "Tile 1171:",
+        "####...##.",
+        "#..##.#..#",
+        "##.#..#.#.",
+        ".###.####.",
+        "..###.####",
+        ".##....##.",
+        ".#...####.",
+        "#.##.####.",
+        "####..#...",
+        ".....##...",
+        "",
+        "Tile 1427:",
+        "###.##.#..",
+        ".#..#.##..",
+        ".#.##.#..#",
+        "#.#.#.##.#",
+        "....#...##",
+        "...##..##.",
+        "...#.#####",
+        ".#.####.#.",
+        "..#..###.#",
+        "..##.#..#.",
+        "",
+        "Tile 1489:",
+        "##.#.#....",
+        "..##...#..",
+        ".##..##...",
+        "..#...#...",
+        "#####...#.",
+        "#..#.#.#.#",
+        "...#.#.#..",
+        "##.#...##.",
+        "..##.##.##",
+        "###.##.#..",
+        "",
+        "Tile 2473:",
+        "#....####.",
+        "#..#.##...",
+        "#.##..#...",
+        "######.#.#",
+        ".#...#.#.#",
+        ".#########",
+        ".###.#..#.",
+        "########.#",
+        "##...##.#.",
+        "..###.#.#.",
+        "",
+        "Tile 2971:",
+        "..#.#....#",
+        "#...###...",
+        "#.#.###...",
+        "##.##..#..",
+        ".#####..##",
+        ".#..####.#",
+        "#..#.#..#.",
+        "..####.###",
+        "..#.#.###.",
+        "...#.#.#.#",
+        "",
+        "Tile 2729:",
+        "...#.#.#.#",
+        "####.#....",
+        "..#.#.....",
+        "....#..#.#",
+        ".##..##.#.",
+        ".#.####...",
+        "####.#.#..",
+        "##.####...",
+        "##..#.##..",
+        "#.##...##.",
+        "",
+        "Tile 3079:",
+        "#.#.#####.",
+        ".#..######",
+        "..#.......",
+        "######....",
+        "####.#..#.",
+        ".#...#.##.",
+        "#.#####.##",
+        "..#.###...",
+        "..#.......",
+        "..#.###...",
+        " "]
 
-    dep_fields = ["departure location", "departure station", "departure platform",
-                  "departure track", "departure date", "departure time"]
+    def test(self):
+        outlines = get_outlines(self.inp)
 
-    task2 = prod([ticket[fields[f]] for f in dep_fields])
+        exp_outlines = dict()
+        for i in range(0, 9):
+            key, val = get_square_outline(self.inp[i*12: (i+1)*12])
+            val += [''.join(list(reversed(s))) for s in val]
+            exp_outlines[key] = val
 
-    return time.time() - start_time, task1, task2
+        self.assertEqual(len(exp_outlines), len(outlines))
+        self.assertEqual(set(exp_outlines), set(outlines))
+
+        self.assertEqual(20899048083289, prod(find_corners(build_image_map(outlines))))
+
+
+def day20():
+    inp = [s.strip() for s in read_lines("day20input.txt")]
+
+    outlines = get_outlines(inp)
+    image_map = build_image_map(outlines)
+    corners = find_corners(image_map)
+
+    # select one corner as anchor
+
+
+
+
+    return 0, prod(corners), 0
+
 
 
 # Main
@@ -1392,9 +1326,16 @@ def run(day):
     run_time, task1, task2 = day()
     print(day.__name__ + ": %.6s s - " % run_time + str(task1) + " " + str(task2))
 
+def run_tests():
+    test_files = glob.glob('*.py')
+    module_strings = [test_file[0:len(test_file) - 3] for test_file in test_files]
+    suites = [unittest.defaultTestLoader.loadTestsFromName(test_file) for test_file in module_strings]
+    test_suite = unittest.TestSuite(suites)
+    unittest.TextTestRunner().run(test_suite)
+
 
 if __name__ == '__main__':
-    for i in range(16, 17):
+    run_tests()
+    for i in range(20, 22):
         run(eval("day" + str(i)))
-    unittest.main()
 
