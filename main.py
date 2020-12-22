@@ -9,7 +9,9 @@ import glob
 
 from itertools import combinations
 from itertools import permutations
+from collections import deque
 from math import prod
+
 
 import np
 
@@ -1149,16 +1151,6 @@ def get_outlines(squares):
     return outlines
 
 def find_corners(image_map):
-    # counts = dict(zip(outlines.keys(), [0] * len(outlines)))
-    #
-    # for i in outlines:
-    #     for j in outlines:
-    #         if i < j:
-    #             intersect = set(outlines[i]).intersection(set(outlines[j]))
-    #             if len(intersect):
-    #                 counts[i] += 1
-    #                 counts[j] += 1
-
     corners = []
     for c in image_map:
         if len(image_map[c]) == 2:
@@ -1173,9 +1165,161 @@ def build_image_map(outlines):
             if i < j:
                 intersect = set(outlines[i]).intersection(set(outlines[j]))
                 if len(intersect):
-                    image_map[i].append((j, intersect))
-                    image_map[j].append((i, intersect))
+                    image_map[i].append(j)
+                    image_map[j].append(i)
     return image_map
+
+def build_image(corners, image_map):
+    # select one corner as anchor
+    c0 = corners[0]
+    image = [
+        [c0, image_map[c0][0]],
+        [image_map[c0][1]]]
+
+    # build image from that corner
+
+    # lower right corner
+    common = set(image_map[image[-1][-1]]).intersection(set(image_map[image[-2][-1]]))
+    common.remove(c0)
+    image[-1].append(common.pop())
+
+    # next right
+    right = set(image_map[image[-2][-1]]).difference(set([image[-2][-2], image[-1][-1]]))
+    image[-2].append(right.pop())
+
+    # lower right corner
+    common = set(image_map[image[-1][-1]]).intersection(set(image_map[image[-2][-1]]))
+    common.remove(image[-2][-2])
+    image[-1].append(common.pop())
+
+    # start next row
+    down = set(image_map[image[-1][0]]).difference(set([image[-2][0], image[-1][1]]))
+    image.append([down.pop()])
+
+    # lower right corner
+    common = set(image_map[image[-1][0]]).intersection(set(image_map[image[-2][1]]))
+    common.remove(image[-2][0])
+    image[-1].append(common.pop())
+
+    # next right
+    right = set(image_map[image[-2][-1]]).difference(set([image[-2][-2], image[-1][-1]]))
+    image[-1].append(right.pop())
+
+    return image
+
+edge_index = ["top", "flip top", "right", "flip right", "bottom", "flip bottom", "left", "flip left"]
+
+def get_right_flip_rotation(index):
+    if edge_index[index] == "left":
+        flip_rotation = (0, 0)
+    elif edge_index[index] == "flip left":
+        flip_rotation = ("top-bottom", 0)
+    elif edge_index[index] == "right":
+        flip_rotation = ("left-right", 0)
+    elif edge_index[index] == "flip right":
+        flip_rotation = (["left-right", "top-bottom"], 0)
+    elif edge_index[index] == "flip top":
+        flip_rotation = (0, -90)
+    elif edge_index[index] == "top":
+        flip_rotation = ("left-right", -90)
+    elif edge_index[index] == "bottom":
+        flip_rotation = (0, 90)
+    elif edge_index[index] == "flip bottom":
+        flip_rotation = ("left-right", 90)
+
+    return flip_rotation
+
+
+def get_bottom_flip_rotation(index):
+    if edge_index[index] == "top":
+        flip_rotation = (0, 0)
+    elif edge_index[index] == "flip top":
+        flip_rotation = ("left-right", 0)
+    elif edge_index[index] == "bottom":
+        flip_rotation = ("top-bottom", 0)
+    elif edge_index[index] == "flip bottom":
+        flip_rotation = (["left-right", "top-bottom"], 0)
+    elif edge_index[index] == "flip left":
+        flip_rotation = (0, 90)
+    elif edge_index[index] == "left":
+        flip_rotation = ("top-bottom", 90)
+    elif edge_index[index] == "right":
+        flip_rotation = (0, -90)
+    elif edge_index[index] == "flip right":
+        flip_rotation = ("top-bottom", -90)
+
+    return flip_rotation
+
+# ["top", "flip top", "right", "flip right", "bottom", "flip bottom", "left", "flip left"]
+
+index_edge = dict(zip(edge_index, range(0, len(edge_index))))
+
+def flip_rotate(image, f_r):
+    im = {}
+    for f in f_r[0]:
+        if f == "top-bottom":
+            im["top"] = image[index_edge["bottom"]]
+            im["flip top"] = image[index_edge["flip bottom"]]
+            im["bottom"] = image[index_edge["top"]]
+            im["flip bottom"] = image[index_edge["flip top"]]
+            im["right"] = image[index_edge["flip right"]]
+            im["flip right"] = image[index_edge["right"]]
+            im["left"] = image[index_edge["flip left"]]
+            im["flip left"] = image[index_edge["left"]]
+        else:
+            im["top"] = image[index_edge["flip top"]]
+            im["flip top"] = image[index_edge["top"]]
+            im["bottom"] = image[index_edge["flip bottom"]]
+            im["flip bottom"] = image[index_edge["bottom"]]
+            im["right"] = image[index_edge["left"]]
+            im["flip right"] = image[index_edge["flip left"]]
+            im["left"] = image[index_edge["right"]]
+            im["flip left"] = image[index_edge["flip right"]]
+
+    if f_r[1] == 90:
+        im["top"] = image[index_edge["flip left"]]
+        im["flip top"] = image[index_edge["left"]]
+        im["bottom"] = image[index_edge["flip right"]]
+        im["flip bottom"] = image[index_edge["right"]]
+        im["right"] = image[index_edge["top"]]
+        im["flip right"] = image[index_edge["flip top"]]
+        im["left"] = image[index_edge["bottom"]]
+        im["flip left"] = image[index_edge["flip bottom"]]
+    else:
+        im["top"] = image[index_edge["right"]]
+        im["flip top"] = image[index_edge["flip right"]]
+        im["bottom"] = image[index_edge["left"]]
+        im["flip bottom"] = image[index_edge["flip left"]]
+        im["right"] = image[index_edge["flip bottom"]]
+        im["flip right"] = image[index_edge["bottom"]]
+        im["left"] = image[index_edge["flip top"]]
+        im["flip left"] = image[index_edge["top"]]
+
+    return im
+
+
+def get_flip_rotate_origin(right_edge, bottom_edge):
+    flip = 0
+    rot = 0
+
+    if right_edge == "right":
+        if bottom_edge == "top":
+            flip = "top-bottom"
+    elif right_edge == "left":
+        flip = "left-right"
+        if bottom_edge == "top":
+            flip = ["left-right", "top-bottom"]
+    elif right_edge == "top":
+        rot = 90
+        if bottom_edge == "left":
+            flip = "left-right"
+    else:
+        rot = -90
+        if bottom_edge == "right":
+            flip = "left-right"
+
+    return (flip, rot)
+
 
 class Test20(unittest.TestCase):
     inp = [
@@ -1288,6 +1432,7 @@ class Test20(unittest.TestCase):
         "..#.###...",
         " "]
 
+
     def test(self):
         outlines = get_outlines(self.inp)
 
@@ -1300,7 +1445,57 @@ class Test20(unittest.TestCase):
         self.assertEqual(len(exp_outlines), len(outlines))
         self.assertEqual(set(exp_outlines), set(outlines))
 
-        self.assertEqual(20899048083289, prod(find_corners(build_image_map(outlines))))
+        image_map = build_image_map(outlines)
+
+        corners = find_corners(image_map)
+        self.assertEqual(20899048083289, prod(corners))
+
+        image = build_image(corners, image_map)
+
+        # flip-rotate corner 0 to match neighbours
+        right = set(outlines[image[0][0]]).intersection(set(outlines[image[0][1]]))
+        right_index = outlines[image[0][0]].index(right.pop())
+        # if it's a flip edge, choose the original orientation instead
+        right_index -= right_index % 2
+        right_edge = edge_index[right_index]
+
+        bottom = set(outlines[image[0][0]]).intersection(set(outlines[image[1][0]]))
+        bottom_index = outlines[image[0][0]].index(bottom.pop())
+        bottom_index -= bottom_index % 2
+        bottom_edge = edge_index[bottom_index]
+
+        c0_f_r = get_flip_rotate_origin(right_edge, bottom_edge)
+        self.assertEqual(("top-bottom", 0), c0_f_r)
+
+        image_rotation = {image[0][0]: c0_f_r}
+
+
+        # get the flip-rotated right edge of previous image, then flip-rotate the one to the right
+
+        i = 0
+
+        for j in range(1, len(image[0])):
+            right = outlines[image[i][j-1]][2]
+            index = outlines[image[i][j]].index(right)
+            image_rotation[image[i][j]] = get_right_flip_rotation(index)
+
+        print(image)
+        print(image_rotation)
+
+        # continue with row below
+
+        i = 1
+        j = 0
+
+        bottom = outlines[image[i-1][j]][0]
+        print(bottom)
+        print(image[i][j])
+        print(outlines[image[i][j]])
+
+        index = outlines[image[i][j]].index(bottom)
+        image_rotation[image[i][j]] = get_bottom_flip_rotation(index)
+
+        print(image_rotation)
 
 
 def day20():
@@ -1310,7 +1505,8 @@ def day20():
     image_map = build_image_map(outlines)
     corners = find_corners(image_map)
 
-    # select one corner as anchor
+
+    #print(image_map)
 
 
 
@@ -1318,6 +1514,210 @@ def day20():
     return 0, prod(corners), 0
 
 
+# Day 22 - space cards!
+
+def play_round(hand1, hand2):
+    card1 = hand1.popleft()
+    card2 = hand2.popleft()
+
+    if card1 > card2:
+        hand1.append(card1)
+        hand1.append(card2)
+    else:
+        hand2.append(card2)
+        hand2.append(card1)
+
+def check_recurring_deck(deck, history):
+    return deck in history
+
+def play_recurring_deck(hand1, hand2, history):
+    if hand1 in history[0]:
+        print("hand1 recurred")
+        return 1
+    if hand2 in history[1]:
+        print("hand2 recurred")
+        return 1
+
+    history[0].append(hand1.copy())
+    history[1].append(hand2.copy())
+
+    card1 = hand1.popleft()
+    card2 = hand2.popleft()
+
+    if len(hand1) >= card1 and len(hand2) >= card2:
+        sub_winner = play_recursive_combat(deque(list(hand1)[:card1]), deque(list(hand2)[:card2]))
+    else:
+        sub_winner = 1 if card1 > card2 else 2
+
+    if sub_winner == 1:
+        hand1.append(card1)
+        hand1.append(card2)
+    else:
+        hand2.append(card2)
+        hand2.append(card1)
+
+    if not len(hand1):
+        return 2
+
+    if not len(hand2):
+        return 1
+
+    return False
+
+def play_recursive_combat(hand1, hand2):
+    history = [[], []]
+    winner = play_recurring_deck(hand1, hand2, history)
+
+    while not winner:
+        winner = play_recurring_deck(hand1, hand2, history)
+
+    return winner
+
+class Test2(unittest.TestCase):
+    hand1 = deque([9, 2, 6, 3, 1])
+    hand2 = deque([5, 8, 4, 7, 10])
+
+    def test(self):
+        hand1 = self.hand1.copy()
+        hand2 = self.hand2.copy()
+        play_round(hand1, hand2)
+        self.assertEqual(6, len(hand1))
+        self.assertEqual(4, len(hand2))
+
+        while len(hand1) and len(hand2):
+            winner = play_round(hand1, hand2)
+
+        win_hand = hand1 if winner == 1 else hand2
+        self.assertEqual(306, sum([a * b for a, b in zip(win_hand, range(len(win_hand), 0, -1))]))
+
+    # should trigger recursion break rule
+    def test_recursion(self):
+        hand1 = deque([43, 19])
+        hand2 = deque([2, 29, 14])
+
+        winner = play_recursive_combat(hand1, hand2)
+        self.assertEqual(1, winner)
+
+    def test_history(self):
+        history = [[]]
+        self.assertFalse(self.hand1 in history[0])
+        history[0].append(deque([3, 4]))
+        history[0].append(self.hand1.copy())
+        history[0].append(deque([1,4,6]))
+        self.assertTrue(self.hand1 in history[0])
+        self.assertFalse(self.hand2 in history[0])
+
+        self.assertEqual(1, play_recurring_deck(deque([1, 2, 3]), deque([4,5,6]), [[deque([1, 2, 3])], []]))
+        self.assertEqual(1, play_recurring_deck(deque([1, 2, 3]), deque([4,5,6]), [[], [deque([4,5,6])]]))
+
+
+    def test_recursive_combat(self):
+        self.assertEqual(deque([1, 2, 3]), deque([1, 2, 3]))
+
+        hand1 = self.hand1.copy()
+        hand2 = self.hand2.copy()
+
+        history1 = []
+        history2 = []
+
+        self.assertFalse(play_recurring_deck(hand1, hand2, [history1, history2]))
+        self.assertEqual(deque([2, 6, 3, 1, 9, 5]), hand1)
+        self.assertEqual(deque([8, 4, 7, 10]), hand2)
+        self.assertTrue(self.hand1 in history1)
+        self.assertTrue(self.hand2 in history2)
+
+        self.assertFalse(play_recurring_deck(hand1, hand2, [history1, history2]))
+        self.assertEqual(deque([6, 3, 1, 9, 5]), hand1)
+        self.assertEqual(deque([4, 7, 10, 8, 2]), hand2)
+
+        self.assertFalse(play_recurring_deck(hand1, hand2, [history1, history2]))
+        self.assertEqual(deque([3, 1, 9, 5, 6, 4]), hand1)
+        self.assertEqual(deque([7, 10, 8, 2]), hand2)
+
+        self.assertFalse(play_recurring_deck(hand1, hand2, [history1, history2]))
+        self.assertEqual(deque([1, 9, 5, 6, 4]), hand1)
+        self.assertEqual(deque([10, 8, 2, 7, 3]), hand2)
+
+        self.assertFalse(play_recurring_deck(hand1, hand2, [history1, history2]))
+        self.assertEqual(deque([9, 5, 6, 4]), hand1)
+        self.assertEqual(deque([8, 2, 7, 3, 10, 1]), hand2)
+
+        self.assertFalse(play_recurring_deck(hand1, hand2, [history1, history2]))
+        self.assertEqual(deque([5, 6, 4, 9, 8]), hand1)
+        self.assertEqual(deque([2, 7, 3, 10, 1]), hand2)
+
+        self.assertFalse(play_recurring_deck(hand1, hand2, [history1, history2]))
+        self.assertEqual(deque([6, 4, 9, 8, 5, 2]), hand1)
+        self.assertEqual(deque([7, 3, 10, 1]), hand2)
+
+        self.assertFalse(play_recurring_deck(hand1, hand2, [history1, history2]))
+        self.assertEqual(deque([4, 9, 8, 5, 2]), hand1)
+        self.assertEqual(deque([3, 10, 1, 7, 6]), hand2)
+
+        self.assertFalse(play_recurring_deck(hand1, hand2, [history1, history2]))
+        self.assertEqual(deque([9, 8, 5, 2]), hand1)
+        self.assertEqual(deque([10, 1, 7, 6, 3, 4]), hand2)
+
+        self.assertFalse(play_recurring_deck(hand1, hand2, [history1, history2]))
+        self.assertEqual(deque([8, 5, 2]), hand1)
+        self.assertEqual(deque([1, 7, 6, 3, 4, 10, 9]), hand2)
+
+        self.assertFalse(play_recurring_deck(hand1, hand2, [history1, history2]))
+        self.assertEqual(deque([5, 2, 8, 1]), hand1)
+        self.assertEqual(deque([7, 6, 3, 4, 10, 9]), hand2)
+
+        self.assertFalse(play_recurring_deck(hand1, hand2, [history1, history2]))
+        self.assertEqual(deque([2, 8, 1]), hand1)
+        self.assertEqual(deque([6, 3, 4, 10, 9, 7, 5]), hand2)
+
+        self.assertFalse(play_recurring_deck(hand1, hand2, [history1, history2]))
+        self.assertEqual(deque([8, 1]), hand1)
+        self.assertEqual(deque([3, 4, 10, 9, 7, 5, 6, 2]), hand2)
+
+        self.assertFalse(play_recurring_deck(hand1, hand2, [history1, history2]))
+        self.assertEqual(deque([1, 8, 3]), hand1)
+        self.assertEqual(deque([4, 10, 9, 7, 5, 6, 2]), hand2)
+
+        self.assertFalse(play_recurring_deck(hand1, hand2, [history1, history2]))
+        self.assertEqual(deque([8, 3]), hand1)
+        self.assertEqual(deque([10, 9, 7, 5, 6, 2, 4, 1]), hand2)
+
+        self.assertFalse(play_recurring_deck(hand1, hand2, [history1, history2]))
+        self.assertEqual(deque([3]), hand1)
+        self.assertEqual(deque([9, 7, 5, 6, 2, 4, 1, 10, 8]), hand2)
+
+        self.assertEqual(2, play_recurring_deck(hand1, hand2, [history1, history2]))
+        self.assertEqual(deque([]), hand1)
+        self.assertEqual(deque([7, 5, 6, 2, 4, 1, 10, 8, 9, 3]), hand2)
+
+        hand1 = self.hand1.copy()
+        hand2 = self.hand2.copy()
+        self.assertEqual(2, play_recursive_combat(hand1, hand2))
+        self.assertEqual(291, sum([a * b for a, b in zip(list(hand2), range(len(hand2), 0, -1))]))
+
+
+def day22():
+    inp = read_lines('day22input.txt')
+    deck1 = deque([int(line) for line in inp[1:26]])
+    deck2 = deque([int(line) for line in inp[28:]])
+
+    hand1 = deck1.copy()
+    hand2 = deck2.copy()
+
+    while len(hand1) and len(hand2):
+        play_round(hand1, hand2)
+
+    winner = hand1 if len(hand1) else hand2
+    task1 = sum([a * b for a, b in zip(winner, range(len(winner), 0, -1))])
+
+    hand1 = deck1.copy()
+    hand2 = deck2.copy()
+
+    winner = play_recursive_combat(hand1, hand2)
+    winner = hand2 if winner == 2 else hand1
+    task2 = sum([a * b for a, b in zip(winner, range(len(winner), 0, -1))])
+
+    return 0, task1, task2
 
 # Main
 
@@ -1336,6 +1736,6 @@ def run_tests():
 
 if __name__ == '__main__':
     run_tests()
-    for i in range(20, 22):
+    for i in range(22, 23):
         run(eval("day" + str(i)))
 
