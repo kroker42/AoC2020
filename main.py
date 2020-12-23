@@ -1479,8 +1479,8 @@ class Test20(unittest.TestCase):
             index = outlines[image[i][j]].index(right)
             image_rotation[image[i][j]] = get_right_flip_rotation(index)
 
-        print(image)
-        print(image_rotation)
+        # print(image)
+        # print(image_rotation)
 
         # continue with row below
 
@@ -1488,14 +1488,14 @@ class Test20(unittest.TestCase):
         j = 0
 
         bottom = outlines[image[i-1][j]][0]
-        print(bottom)
-        print(image[i][j])
-        print(outlines[image[i][j]])
+        # print(bottom)
+        # print(image[i][j])
+        # print(outlines[image[i][j]])
 
         index = outlines[image[i][j]].index(bottom)
         image_rotation[image[i][j]] = get_bottom_flip_rotation(index)
 
-        print(image_rotation)
+        # print(image_rotation)
 
 
 def day20():
@@ -1532,10 +1532,8 @@ def check_recurring_deck(deck, history):
 
 def play_recurring_deck(hand1, hand2, history):
     if hand1 in history[0]:
-        print("hand1 recurred")
         return 1
     if hand2 in history[1]:
-        print("hand2 recurred")
         return 1
 
     history[0].append(hand1.copy())
@@ -1719,6 +1717,133 @@ def day22():
 
     return 0, task1, task2
 
+# Crab cups
+
+def move_cups(cups = deque()):
+    num = len(cups)
+    current = cups[0]
+    cups.rotate(-1)
+
+    pick_ups = [cups.popleft() for i in range(0, 3)]
+
+    i = current - 1 if current > 1 else num
+    while i in pick_ups:
+        i = i - 1 if i > 1 else num
+
+    insert_point = cups.index(i) + 1
+    cups.insert(insert_point, pick_ups[2])
+    cups.insert(insert_point, pick_ups[1])
+    cups.insert(insert_point, pick_ups[0])
+
+
+def move_cups2(current, num, cups):
+    pick_ups = [cups[current], cups[cups[current]], cups[cups[cups[current]]]]
+
+    i = current - 1 if current > 1 else num
+    while i in pick_ups:
+        i = i - 1 if i > 1 else num
+
+    cups[current] = cups[pick_ups[2]]
+    cups[pick_ups[2]] = cups[i]
+    cups[i] = pick_ups[0]
+
+def crab_cups_map(inp):
+    order = inp + list(range(10, 1000001))
+    cups = dict(zip(order, order[1:] + order[0:1]))
+
+    current = inp[0]
+    for i in range(0, 10000000):
+        move_cups2(current, 1000000, cups)
+        current = cups[current]
+
+    return cups
+
+def crab_cups_list(inp):
+    order = inp + list(range(10, 1000001))
+
+    cups = [0] * 10000001
+    cups[1000000] = order[0]
+
+    for i in range(0, len(order) - 1):
+        cups[order[i]] = order[i+1]
+
+    current = inp[0]
+    for i in range(0, 10000000):
+        pick_ups = [cups[current], cups[cups[current]], cups[cups[cups[current]]]]
+
+        i = current - 1 if current > 1 else 1000000
+        while i in pick_ups:
+            i = i - 1 if i > 1 else 1000000
+
+        cups[current] = cups[pick_ups[2]]
+        cups[pick_ups[2]] = cups[i]
+        cups[i] = pick_ups[0]
+        current = cups[current]
+
+    return cups
+
+class Test23(unittest.TestCase):
+    def test(self):
+        cups = deque([3, 8, 9, 1, 2, 5, 4, 6, 7])
+
+        c = cups.copy()
+        move_cups(c)
+        self.assertEqual(deque([2, 8, 9, 1, 5, 4, 6, 7, 3]), c)
+        move_cups(c)
+        self.assertEqual(deque([5, 4, 6, 7, 8, 9, 1, 3, 2]), c)
+        move_cups(c)
+        self.assertEqual(deque([8, 9, 1, 3, 4, 6, 7, 2, 5]), c)
+        move_cups(c)
+        self.assertEqual(deque([4, 6, 7, 9, 1, 3, 2, 5, 8]), c)
+
+        c = cups.copy()
+        for i in range(0, 10):
+            move_cups(c)
+        self.assertEqual(deque([8, 3, 7, 4, 1, 9, 2, 6, 5]), c)
+
+        index1 = c.index(1)
+        c.rotate(-index1)
+        c.popleft()
+        self.assertEqual(deque([9, 2, 6, 5, 8, 3,  7,  4]), c)
+        self.assertEqual('92658374', ''.join([str(i) for i in c]))
+
+    def test_map(self):
+        order = [3, 8, 9, 1, 2, 5, 4, 6, 7]
+        cups = dict(zip(order, order[1:] + order[0:1]))
+
+        current = 3
+        for i in range(0, 10):
+            move_cups2(current, len(cups), cups)
+            current = cups[current]
+
+        self.assertEqual({3: 7, 7: 4, 4: 1, 1: 9, 9: 2, 2: 6, 6: 5, 5: 8, 8: 3}, cups)
+
+    # def test_map_10mill(self):
+    #     inp = [3, 8, 9, 1, 2, 5, 4, 6, 7]
+    #     cups = crab_cups_list(inp)
+    #     self.assertEqual(149245887792, cups[1] * cups[cups[1]])
+
+
+def day23():
+    inp = [int(i) for i in '467528193']
+    cups = deque(inp)
+
+    c = cups.copy()
+    for i in range(0, 100):
+        move_cups(c)
+
+    c.rotate(-c.index(1))
+    c.popleft()
+    task1 = ''.join([str(i) for i in c])
+
+    # 1.000.000 cups, 10.000.000 moves
+    start_task2 = time.time()
+
+    cups = crab_cups_list(inp)
+    task2 = cups[1] * cups[cups[1]]
+
+    return time.time() - start_task2, task1, task2
+
 # Main
 
 
@@ -1736,6 +1861,6 @@ def run_tests():
 
 if __name__ == '__main__':
     run_tests()
-    for i in range(22, 23):
+    for i in range(23, 24):
         run(eval("day" + str(i)))
 
