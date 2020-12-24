@@ -315,7 +315,6 @@ hex_coords = {
 
 def move_hex(moves, hex_map):
     path = re.findall(r"se|sw|ne|nw|e|w", moves)
-#    print(path)
 
     coords = [0, 0, 0]
     for c in path:
@@ -325,17 +324,22 @@ def move_hex(moves, hex_map):
 
 def flip(tile, hex_map):
     if tile in hex_map:
-        hex_map[tile] ^= 1 # XOR
+        del hex_map[tile]
     else:
         hex_map[tile] = 1
 
+def get_neighbours_hex(tile):
+    return [tuple(np.add(tile, n)) for n in hex_coords.values()]
 
 def count_neighbours_hex(tile, hex_map):
     count = 0
     for n in hex_coords.values():
         neighbour = tuple(np.add(tile, n))
         if neighbour in hex_map:
-            count += hex_map[neighbour]
+            count += 1
+        if count > 2:
+            break
+
     return count
 
 def count_neighbours(tile, hex_map, counts):
@@ -343,9 +347,39 @@ def count_neighbours(tile, hex_map, counts):
     for n in hex_coords.values():
         neighbour = tuple(np.add(tile, n))
         if neighbour in hex_map:
-            count += hex_map[neighbour]
-        elif hex_map[tile] and neighbour not in counts:
+            count += 1
+        elif neighbour not in counts:
             counts[neighbour] = count_neighbours_hex(neighbour, hex_map)
+
+    counts[tile] = count
+
+
+def count_neighbours_hex2(tile, hex_map, neighbours):
+    count = 0
+
+    if tile not in neighbours:
+        neighbours[tile] = get_neighbours_hex(tile)
+
+    for neighbour in neighbours[tile]:
+        if neighbour in hex_map:
+            count += 1
+        if count > 2:
+            break
+
+    return count
+
+
+def count_neighbours2(tile, hex_map, counts, neighbours):
+    count = 0
+
+    if tile not in neighbours:
+        neighbours[tile] = get_neighbours_hex(tile)
+
+    for neighbour in neighbours[tile]:
+        if neighbour in hex_map:
+            count += 1
+        elif neighbour not in counts:
+            counts[neighbour] = count_neighbours_hex2(neighbour, hex_map, neighbours)
 
     counts[tile] = count
 
@@ -356,27 +390,43 @@ def daily_flip(hex_map):
         count_neighbours(tile, hex_map, counts)
 
     for tile in counts:
-        # black tiles
-        if tile in hex_map and hex_map[tile] == 1 and (counts[tile] == 0 or counts[tile] > 2):
-            flip(tile, hex_map1)
-        elif (tile not in hex_map or hex_map[tile] == 0) and counts[tile] == 2:  # white tiles
+        if tile in hex_map:  # black tiles
+            if counts[tile] == 0 or counts[tile] > 2:
+                flip(tile, hex_map1)
+        elif counts[tile] == 2:  # white tiles
             flip(tile, hex_map1)
 
     return hex_map1
 
+def daily_flip2(hex_map, neighbours):
+    hex_map1 = hex_map.copy()
+    counts = {}
+    for tile in hex_map:
+        count_neighbours2(tile, hex_map, counts, neighbours)
+
+    for tile in counts:
+        if tile in hex_map:  # black tiles
+            if counts[tile] == 0 or counts[tile] > 2:
+                flip(tile, hex_map1)
+        elif counts[tile] == 2:  # white tiles
+            flip(tile, hex_map1)
+
+    return hex_map1
+
+
 class Test24(unittest.TestCase):
     def test(self):
-        hex_map = {(0, 0, 0): 0}
+        hex_map = {}
 
         self.assertEqual((3, -3, 0), move_hex("esenee", hex_map))
         self.assertEqual((0, 0, 0), move_hex("nwwswee", hex_map))
 
         flip(move_hex("esenee", hex_map), hex_map)
-        self.assertEqual(1, hex_map[(3, -3, 0)])
+        self.assertTrue((3, -3, 0) in hex_map)
         flip(move_hex("ew", hex_map), hex_map)
         self.assertEqual(1, hex_map[(0, 0, 0)])
         flip(move_hex("ew", hex_map), hex_map)
-        self.assertEqual(0, hex_map[(0, 0, 0)])
+        self.assertFalse((0, 0, 0) in hex_map)
 
     def test2(self):
         inp = ["sesenwnenenewseeswwswswwnenewsewsw", "neeenesenwnwwswnenewnwwsewnenwseswesw",
@@ -388,12 +438,12 @@ class Test24(unittest.TestCase):
                "wnwnesenesenenwwnenwsewesewsesesew", "nenewswnwewswnenesenwnesewesw",
                "eneswnwswnwsenenwnwnwwseeswneewsenese", "neswnwewnwnwseenwseesewsenwsweewe", "wseweeenwnesenwwwswnew"]
 
-        hex_map = {(0, 0, 0): 0}
+        hex_map = {}
 
         for m in inp:
             flip(move_hex(m, hex_map), hex_map)
 
-        self.assertEqual(15, len(hex_map))
+        self.assertEqual(10, len(hex_map))
         self.assertEqual(10, sum(hex_map.values()))
 
         self.assertEqual(1, count_neighbours_hex((0, 0, 0), hex_map))
@@ -409,15 +459,19 @@ class Test24(unittest.TestCase):
 def day24():
     inp = read_lines('day24input.txt')
 
-    hex_map = {(0, 0, 0): 0}
+    hex_map = {}
     for m in inp:
         flip(move_hex(m, hex_map), hex_map)
 
-    task1 = sum(hex_map.values())
+    task1 = len(hex_map)
+
+    start2 = time.time()
+
+    neighbours = {}
 
     for i in range(0, 100):
-        hex_map = daily_flip(hex_map)
+        hex_map = daily_flip2(hex_map, neighbours)
 
-    task2 = sum(hex_map.values())
+    task2 = len(hex_map)
 
-    return 0, task1, task2
+    return time.time() - start2, task1, task2
