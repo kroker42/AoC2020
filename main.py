@@ -18,6 +18,7 @@ import np
 from filereader import read_lines
 from GameOfLife import day11
 from GameOfLife import day17
+from GameOfLife import day24
 from langs import day16
 from langs import day21
 
@@ -1861,6 +1862,6 @@ def run_tests():
 
 if __name__ == '__main__':
     run_tests()
-    for i in range(23, 24):
+    for i in range(24, 25):
         run(eval("day" + str(i)))
 

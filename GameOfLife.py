@@ -4,6 +4,7 @@ from filereader import read_lines
 import time
 import unittest
 
+import re
 import np
 
 def get_matrix(lines, symbols):
@@ -299,3 +300,124 @@ def day17():
     task1 = None
     task2 = None
     return time.time() - start_time, task1, task2
+
+
+# Day 24: hex map Game of Life
+
+hex_coords = {
+    "e":  [1, -1, 0],
+    "w":  [-1, 1, 0],
+    "se": [1, 0, -1],
+    "nw": [-1, 0, 1],
+    "ne": [0, -1, 1],
+    "sw": [0, 1, -1],
+}
+
+def move_hex(moves, hex_map):
+    path = re.findall(r"se|sw|ne|nw|e|w", moves)
+#    print(path)
+
+    coords = [0, 0, 0]
+    for c in path:
+        coords = np.add(coords, hex_coords[c])
+
+    return tuple(coords)
+
+def flip(tile, hex_map):
+    if tile in hex_map:
+        hex_map[tile] ^= 1 # XOR
+    else:
+        hex_map[tile] = 1
+
+
+def count_neighbours_hex(tile, hex_map):
+    count = 0
+    for n in hex_coords.values():
+        neighbour = tuple(np.add(tile, n))
+        if neighbour in hex_map:
+            count += hex_map[neighbour]
+    return count
+
+def count_neighbours(tile, hex_map, counts):
+    count = 0
+    for n in hex_coords.values():
+        neighbour = tuple(np.add(tile, n))
+        if neighbour in hex_map:
+            count += hex_map[neighbour]
+        elif hex_map[tile] and neighbour not in counts:
+            counts[neighbour] = count_neighbours_hex(neighbour, hex_map)
+
+    counts[tile] = count
+
+def daily_flip(hex_map):
+    hex_map1 = hex_map.copy()
+    counts = {}
+    for tile in hex_map:
+        count_neighbours(tile, hex_map, counts)
+
+    for tile in counts:
+        # black tiles
+        if tile in hex_map and hex_map[tile] == 1 and (counts[tile] == 0 or counts[tile] > 2):
+            flip(tile, hex_map1)
+        elif (tile not in hex_map or hex_map[tile] == 0) and counts[tile] == 2:  # white tiles
+            flip(tile, hex_map1)
+
+    return hex_map1
+
+class Test24(unittest.TestCase):
+    def test(self):
+        hex_map = {(0, 0, 0): 0}
+
+        self.assertEqual((3, -3, 0), move_hex("esenee", hex_map))
+        self.assertEqual((0, 0, 0), move_hex("nwwswee", hex_map))
+
+        flip(move_hex("esenee", hex_map), hex_map)
+        self.assertEqual(1, hex_map[(3, -3, 0)])
+        flip(move_hex("ew", hex_map), hex_map)
+        self.assertEqual(1, hex_map[(0, 0, 0)])
+        flip(move_hex("ew", hex_map), hex_map)
+        self.assertEqual(0, hex_map[(0, 0, 0)])
+
+    def test2(self):
+        inp = ["sesenwnenenewseeswwswswwnenewsewsw", "neeenesenwnwwswnenewnwwsewnenwseswesw",
+               "seswneswswsenwwnwse", "nwnwneseeswswnenewneswwnewseswneseene", "swweswneswnenwsewnwneneseenw",
+               "eesenwseswswnenwswnwnwsewwnwsene", "sewnenenenesenwsewnenwwwse", "wenwwweseeeweswwwnwwe",
+               "wsweesenenewnwwnwsenewsenwwsesesenwne", "neeswseenwwswnwswswnw", "nenwswwsewswnenenewsenwsenwnesesenew",
+               "enewnwewneswsewnwswenweswnenwsenwsw", "sweneswneswneneenwnewenewwneswswnese",
+               "swwesenesewenwneswnwwneseswwne", "enesenwswwswneneswsenwnewswseenwsese",
+               "wnwnesenesenenwwnenwsewesewsesesew", "nenewswnwewswnenesenwnesewesw",
+               "eneswnwswnwsenenwnwnwwseeswneewsenese", "neswnwewnwnwseenwseesewsenwsweewe", "wseweeenwnesenwwwswnew"]
+
+        hex_map = {(0, 0, 0): 0}
+
+        for m in inp:
+            flip(move_hex(m, hex_map), hex_map)
+
+        self.assertEqual(15, len(hex_map))
+        self.assertEqual(10, sum(hex_map.values()))
+
+        self.assertEqual(1, count_neighbours_hex((0, 0, 0), hex_map))
+
+        hex_map = daily_flip(hex_map)
+        self.assertEqual(15, sum(hex_map.values()))
+        hex_map = daily_flip(hex_map)
+        self.assertEqual(12, sum(hex_map.values()))
+        hex_map = daily_flip(hex_map)
+        self.assertEqual(25, sum(hex_map.values()))
+
+
+def day24():
+    inp = read_lines('day24input.txt')
+
+    hex_map = {(0, 0, 0): 0}
+    for m in inp:
+        flip(move_hex(m, hex_map), hex_map)
+
+    task1 = sum(hex_map.values())
+
+    for i in range(0, 100):
+        hex_map = daily_flip(hex_map)
+
+    task2 = sum(hex_map.values())
+
+    return 0, task1, task2
