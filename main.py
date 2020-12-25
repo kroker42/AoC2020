@@ -1845,6 +1845,53 @@ def day23():
 
     return time.time() - start_task2, task1, task2
 
+
+# Day 25: encryption
+
+def diffie_hellman(val, exp):
+    return (val ** exp) % 20201227
+
+def transform_subject(val, loop_size):
+    for i in range(0, loop_size):
+        val *= 7
+        val = val % 20201227
+    return val
+
+def reverse_key(key):
+    i = 0
+    val = 1
+    while True:
+        i += 1
+        val *= 7
+        val = val % 20201227
+        if val == key:
+            return i
+
+
+class Test25(unittest.TestCase):
+    def test(self):
+        self.assertEqual(5764801, transform_subject(1, 8))
+        self.assertEqual(17807724, transform_subject(1, 11))
+        self.assertEqual(14897079, transform_subject(1, 88))
+        self.assertEqual(14897079, diffie_hellman(5764801, 11))
+        self.assertEqual(14897079, diffie_hellman(17807724, 8))
+
+    def test_reverse(self):
+        self.assertEqual(8, reverse_key(5764801))
+        self.assertEqual(11, reverse_key(17807724))
+        self.assertEqual(88, reverse_key(14897079))
+
+def day25():
+    card_subject = 12320657
+    door_subject = 9659666
+
+    card_loop_size = reverse_key(card_subject)
+    door_loop_size = reverse_key(door_subject)
+    #select smaller of card_loop_size, door_loop_size
+    task1 = diffie_hellman(card_subject, door_loop_size)
+
+    return 0, task1, 0
+
 # Main
 
 
@@ -1862,6 +1909,6 @@ def run_tests():
 
 if __name__ == '__main__':
     run_tests()
-    for i in range(24, 25):
+    for i in range(25, 26):
         run(eval("day" + str(i)))
 
